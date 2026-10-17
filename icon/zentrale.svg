@@ -1,0 +1,15 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
+  <!-- Zentrale: helle Kachel mit dem Themen-Ring (erledigt grün, beim Kunden schraffiert, bei mir Flieder) -->
+  <defs>
+    <pattern id="s" patternUnits="userSpaceOnUse" width="22" height="22" patternTransform="rotate(45)">
+      <rect width="22" height="22" fill="#E7E0FB"/><rect width="9" height="22" fill="#7F5FE8"/>
+    </pattern>
+  </defs>
+  <rect width="512" height="512" rx="112" fill="#F6F6F8"/>
+  <g fill="none" stroke-width="58" transform="rotate(-90 256 256)">
+    <circle cx="256" cy="256" r="150" stroke="#E6E6EC"/>
+    <circle cx="256" cy="256" r="150" stroke="#26925F" stroke-dasharray="330 612"/>
+    <circle cx="256" cy="256" r="150" stroke="url(#s)" stroke-dasharray="270 672" stroke-dashoffset="-350"/>
+    <circle cx="256" cy="256" r="150" stroke="#7F5FE8" stroke-dasharray="282 660" stroke-dashoffset="-640"/>
+  </g>
+</svg>

@@ -3,6 +3,10 @@
 Lukas' Zentrale für die Selbstständigkeit (FINPAL): Kunden, Themen aus den Beratungen und die Aufgaben daraus an einer
 Stelle. Sprache in App, Code-Kommentaren und Commits: **Deutsch**.
 
+- **Echte Fassung:** https://lulkasss.github.io/Zentrale/ (GitHub Pages aus `main`, Anmeldung mit dem Klar-Konto).
+  Seit 17.10.2026; Lukas startet mit Testkunden.
+- **Entwurf mit erfundenen Kunden:** https://claude.ai/artifact/FagTHHJLxR3kJQt6Hbmov7 (dieselbe `index.html` ohne Konto).
+
 ## Ziel
 - **Wofür:** Nach jedem Kundentermin wird jede Zusage zu einer Aufgabe, und beim Kunden steht nachvollziehbar, was
   besprochen, zugesagt und erledigt ist. Nichts geht verloren zwischen OneNote, Klar und Kalender.
@@ -67,7 +71,10 @@ Stelle. Sprache in App, Code-Kommentaren und Commits: **Deutsch**.
   Wiedervorlage), Priorität, Fällig, Unterpunkte (Haken offen → läuft → erledigt, Nummer, Notiz, ab „läuft“
   Lösung, warte auf … mit Nachgefragt/Antwort kam), Punkt hinzufügen, Erledigt, Verlauf, Festhalten (Ganze
   Aufgabe oder ein Punkt, ⌘↵), Notiz. In der Akte steht dieselbe Aufgabe im Reiter Aufgaben. Heute zeigt
-  „Nachfragen“ nach Klars Rhythmus. Wartet auf Lukas.
+  „Nachfragen“ nach Klars Rhythmus.
+  Rückmeldung: „final bauen“, darf auf `main`, GitHub Pages eingestellt, erst nur Testkunden.
+- Echte Fassung (17.10.2026): wie Entwurf 4, dazu Anmeldung mit dem Klar-Konto, Daten im Konto, Aufgaben direkt in
+  Klar (siehe „Konto und Klar“).
 
 ## Aufbau
 - `index.html` – die ganze App. Erstes Script `<script id="kern">`: Daten (Kunde mit `themen`, `termine`, `finanzen`,
@@ -75,14 +82,24 @@ Stelle. Sprache in App, Code-Kommentaren und Commits: **Deutsch**.
   Summen, Kunde und Termin anlegen, Themen erkennen, Aufgabe und Mail bauen, Übernehmen, Abhaken. Läuft auch in Node (`test/kern.spec.js`). Zweites Script: Oberfläche
   (Zustand `S`, `render()`, `go(seite)`). CSS in einem `<style>`-Block (Tokens → Grundlagen → Bausteine → Bereiche).
   Look nach Skill `app-ui`, Schrift Geist über Google Fonts.
-- `scripts/` – `serve.mjs` (:5190), `check.mjs`, `artefakt.mjs <ziel>` (Fassung fürs Claude-Artifact).
+- Drittes Teil im zweiten Script: `KONTO` (nur mit `#wolkeziel`): Anmeldung, Laden, Speichern, Live-Abgleich,
+  Schreiben in Klar. Ohne Ziel bleibt es der Entwurf (Beispielkunden, `sessionStorage`).
+- `wolke.json` – Supabase-Adresse und öffentlicher Schlüssel, dieselben wie in Klar. Nie den geheimen Schlüssel.
+- `scripts/` – `serve.mjs` (:5190 Entwurf, `/konto` echte Fassung gegen den Test-Speicher, `/konto?echt` gegen das
+  echte Projekt), `bauen.mjs` (echte Fassung nach `public/` mit Ziel, Manifest, App-Zeichen), `check.mjs`,
+  `artefakt.mjs <ziel>` (Entwurf fürs Claude-Artifact), `icons.mjs` (PNG aus `icon/zentrale.svg`: Themen-Ring).
+- `.github/workflows/pages.yml` – bei jedem Push prüfen und testen; auf `main` bauen und auf GitHub Pages stellen.
+- `test/konto.spec.js` – echte Fassung gegen nachgebautes Supabase (wie Klars `test/wolke.spec.js`): Anmelden,
+  Kunde im Konto, „@Name“-Aufgabe aus Klar, Schreiben nur der eigenen Aufgabe mit Sicherung vorher, Nachbereiten
+  nach Klar, Änderungen aus Klar live, gleichzeitiges Speichern, Klar überschreibt mit älterem Stand.
 - `test/` – `kern.spec.js` (u. a. Klars Form, Punkt-Zyklus, Warten-Rhythmus, Festhalten), `app.spec.js` (Heute, Kunde
   anlegen, Finanzen, Termin, Nachbereiten, Landingpage, Aufgabenliste und Blatt wie in Klar, Warten/Nachfragen/
   Antwort, Kundensicht, Neuladen, Handy, hell/dunkel, keine doppelten IDs).
 
 ## Befehle
 - `npm test` – Fehlercheck + alle Tests, vor jedem Commit grün. Cloud-Sitzung: `PW_CHROMIUM=/opt/pw-browsers/chromium npm test`.
-- `npm run dev` – http://localhost:5190.
+- `npm run dev` – http://localhost:5190 (Entwurf), http://localhost:5190/konto (mit Konto, Test-Speicher).
+- Veröffentlichen: auf `main` pushen, GitHub Actions testet, baut und stellt auf Pages.
 - Entwurf zeigen: `node scripts/artefakt.mjs <scratchpad>/zentrale.html`, dann Artifact publish auf die URL oben.
 
 ## Regeln
@@ -109,6 +126,20 @@ Stelle. Sprache in App, Code-Kommentaren und Commits: **Deutsch**.
 - Entwurf speichert nur im Tab (`sessionStorage`, Schlüssel `zentrale.entwurf.3`), „Beispiel neu laden“ unter „Entwurf“.
   Die echte Fassung speichert im Konto, nicht im Browser.
 
+## Konto und Klar (echte Fassung)
+- Dieselbe Anmeldung (Speicher `klar.anmeldung`) und Tabelle wie Klar: `klar_dokumente`, Zeilensicherheit je Nutzer.
+- Die Zentrale hat `zentrale/aktuell`: `daten = {stand: JSON {fassung: 1, kunden}, zuletzt, geraet, geraetname}`.
+- Die Aufgaben stehen in Klars `stand/aktuell` (nicht doppelt in der Zentrale). Eine Klar-Aufgabe gehört zu einem
+  Kunden, wenn sie `kunde` trägt oder „@Name“ heißt (dann bekommt sie `kunde` beim nächsten Schreiben).
+- Schreiben in Klar: frisch lesen, vor dem ersten Schreiben je Sitzung `sicherungen/<Zeit>` mit `grund: "vor Zentrale"`,
+  nur die geänderten Aufgaben gegen den frischen Stand zusammenführen (`zusammenfuehren`: je Feld und je Punkt gewinnt,
+  wer geändert hat, Verlauf vereinigt), zurück mit `zuletzt` innen und außen gleich, `geraet: "zentrale"`. Bedingt
+  geschrieben (`daten->>zuletzt` wie gelesen), sonst bis zu dreimal neu lesen und zusammenführen.
+- Klar übernimmt den Stand live. Hatte Klar gerade eigene ungespeicherte Arbeit, behält es seinen Stand (und legt beide
+  als Sicherung ab); die Zentrale erkennt das und schreibt ihre Änderung nochmal.
+- Immer nur ein Speichervorgang zugleich; das eigene Echo im Live-Abgleich wird erkannt (`schreibt`).
+- Klars Darstellung der Zentrale-Aufgaben ist geprüft (Notiz mit Wiki-Ablauf, Verlauf am Punkt, läuft, wartet).
+
 ## Annahmen (Lukas vorlegen)
 - Die Abläufe in `WIKI` sind Beispiele (Haftpflicht/Hausrat rechnen in PW oder Xempus, BU-Voranfrage, Altersvorsorge
   vorbereiten mit dem Investmentrechner). Die echten kommen aus dem Persönlichen Wiki.
@@ -120,14 +151,14 @@ Stelle. Sprache in App, Code-Kommentaren und Commits: **Deutsch**.
   zählt nicht mit. Keine Bewertung, nur Zahlen.
 
 ## Weg (Stand 17.10.2026)
-1. Klickbarer Entwurf mit erfundenen Daten (diese Fassung).
-2. Konto: dieselbe Anmeldung wie Klar und Wiki (Supabase-Projekt von Klar). Aufgaben gehen in Klars `stand/aktuell`
-   (Regeln dafür in `LULKASSS/klar`, CLAUDE.md), Abhaken in Klar schreibt das Thema fort, Abläufe aus `wiki/aktuell`.
-   Claude-Ergänzung aus dem Freitext über einen kleinen Dienst bei Supabase mit API-Schlüssel (nicht in der Seite).
+1. Klickbarer Entwurf mit erfundenen Daten. Erledigt.
+2. Konto und Klar: erledigt (17.10.2026). Offen daraus: Abhaken in Klar schreibt das Thema in der Zentrale noch nicht
+   fort (nur in der Zentrale), Abläufe noch aus `WIKI` statt aus `wiki/aktuell`, Claude-Ergänzung aus dem Freitext
+   (kleiner Dienst bei Supabase mit API-Schlüssel, nicht in der Seite).
 3. Finanzen beim Kunden (aus der Finanzakte nur, was abgenommen war).
 4. Professional Works (Mails, Verträge), wenn die API geklärt ist.
 
 ## Offen für Lukas
 - Datenschutz: Kunden-Finanzdaten bei Supabase (Frankfurt). AVV mit Supabase prüfen, Vorgaben von FINPAL klären.
-  Vorher keine echten Kundendaten in die Zentrale.
+  Vorher keine echten Kundendaten in die Zentrale (Lukas, 17.10.2026: startet mit Testkunden).
 - Wo liegt der Code der Finanzakte-Ansicht aus dem Screenshot? In `LULKASSS/finanzaufnahme` ist sie nicht (Stand 17.10.2026).

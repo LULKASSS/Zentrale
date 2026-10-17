@@ -224,6 +224,17 @@ textarea.feld { resize:vertical; line-height:1.55; }
   display:flex; flex-direction:column; gap:8px; align-items:flex-start;
 }
 .entwurf-text b { color:var(--fg); font-weight:600; }
+.entwurf-text a { color:var(--accent-ink); }
+.entwurf-knopf[data-status]::before { content:""; display:inline-block; width:7px; height:7px; border-radius:50%; margin-right:7px; vertical-align:1px; background:var(--ok); }
+.entwurf-knopf[data-status="speichert"]::before, .entwurf-knopf[data-status="verbindet"]::before { background:var(--fg-3); }
+.entwurf-knopf[data-status="fehler"]::before { background:var(--gap); }
+.konto-stand[data-status="fehler"] { color:var(--gap-ink); }
+html[data-tor] .kopf .umschalter, html[data-tor] .kopf .rechts { visibility:hidden; }
+.tor { min-height:60vh; display:grid; place-items:center; }
+.leer-start { display:flex; flex-direction:column; align-items:flex-start; gap:8px; }
+.tor-karte { width:100%; max-width:380px; display:flex; flex-direction:column; gap:10px; }
+.tor-karte h1 { font-size:24px; }
+.tor-meldung { min-height:1.4em; font-size:13px; color:var(--fg-2); }
 
 main { padding-block:20px 80px; }
 .seite { animation:rein .33s var(--ease) both; }
@@ -686,8 +697,10 @@ var BEISPIEL_MITSCHRIFT = [
   "- schickt Steuerbescheid 2025 nach"
 ].join("\n");
 
-var _id = 0;
-function neueId(p) { _id += 1; return (p || "x") + _id; }
+var _id = 0, _zufall = false;
+/* Im Entwurf zählen die Kennungen einfach hoch; mit Konto kommen Zeit und Zufall dazu, damit zwei Geräte
+   (und Klar) nie dieselbe Kennung vergeben. */
+function neueId(p) { _id += 1; return (p || "x") + _id + (_zufall ? "-" + Date.now().toString(36) + Math.random().toString(36).slice(2, 6) : ""); }
 
 function tageZwischen(a, b) { return Math.round((Date.parse(b) - Date.parse(a)) / 864e5); }
 function plusTage(iso, n) { var d = new Date(Date.parse(iso) + n * 864e5); return d.toISOString().slice(0, 10); }
@@ -1170,6 +1183,30 @@ function aufgabeAbhaken(S, aid, an, am) {
   a.status = an ? "erledigt" : "offen"; a.erledigtAm = an ? (am || jetztIso()) : ""; a.laeuft = false;
   verlaufDazu(a, an ? "Erledigt." : "Wieder offen.", "auto", "status", null, am);
 }
+/* Klar und die Zentrale haben dieselbe Aufgabe gleichzeitig geändert: von der gemeinsamen Grundlage aus
+   gewinnt je Feld und je Punkt die Seite, die etwas geändert hat; der Verlauf wird vereinigt. */
+function klon(x) { return x == null ? x : JSON.parse(JSON.stringify(x)); }
+function zusammenfuehren(theirs, basis, mine) {
+  var gleich = function (a, b) { return JSON.stringify(a) === JSON.stringify(b); };
+  if (!basis || gleich(theirs, basis)) { return klon(mine); }
+  if (gleich(mine, basis)) { return klon(theirs); }
+  var r = klon(theirs);
+  Object.keys(mine).forEach(function (f) { if (f !== "punkte" && f !== "verlauf" && !gleich(mine[f], basis[f])) { r[f] = klon(mine[f]); } });
+  function nachId(l) { var m = {}; (l || []).forEach(function (x) { m[x.id] = x; }); return m; }
+  var bp = nachId(basis.punkte), mp = nachId(mine.punkte);
+  r.punkte = r.punkte || [];
+  (mine.punkte || []).forEach(function (p) {
+    var i = -1; r.punkte.forEach(function (x, j) { if (x.id === p.id) { i = j; } });
+    if (!bp[p.id]) { if (i < 0) { r.punkte.push(klon(p)); } return; }
+    if (i >= 0 && !gleich(p, bp[p.id])) { r.punkte[i] = klon(p); }
+  });
+  r.punkte = r.punkte.filter(function (p) { return !(bp[p.id] && !mp[p.id] && gleich(p, bp[p.id])); });
+  var gesehen = {}, v = [];
+  (r.verlauf || []).concat(mine.verlauf || []).forEach(function (e) { if (!gesehen[e.id]) { gesehen[e.id] = 1; v.push(klon(e)); } });
+  r.verlauf = v.sort(function (a, b) { return a.am < b.am ? -1 : a.am > b.am ? 1 : 0; });
+  return r;
+}
+
 function aufgabeLaeuft(S, aid, an, am) {
   var a = finde(S, aid).a;
   a.laeuft = !!an;
@@ -1193,14 +1230,17 @@ if (typeof module !== "undefined") {
     erkenneThemen: erkenneThemen, vorschlagWas: vorschlagWas, baueAufgabe: baueAufgabe, baueMail: baueMail, uebernehmen: uebernehmen,
     neuerPunkt: neuerPunkt, setzeThemaStand: setzeThemaStand, setzePunktStand: setzePunktStand, naechsterPunktStand: naechsterPunktStand,
     punktStand: punktStand, lageWarten: lageWarten, warteAuf: warteAuf, nachgefragt: nachgefragt, antwortKam: antwortKam, festhalten: festhalten,
-    aufgabeAbhaken: aufgabeAbhaken, aufgabeLaeuft: aufgabeLaeuft };
+    aufgabeAbhaken: aufgabeAbhaken, aufgabeLaeuft: aufgabeLaeuft, zusammenfuehren: zusammenfuehren };
 }
 </script>
 
 <script>
 /* Oberfläche: ein Zustand S, eine render(), go(seite) blendet ein. */
 var SPEICHER = "zentrale.entwurf.3";
-var S = laden() || beispielStand();
+/* Mit Konto (echte Fassung) gibt der Bau ein Ziel mit; ohne ist es der Entwurf mit erfundenen Kunden. */
+var ZIEL = (function () { try { var el = document.getElementById("wolkeziel"); return el ? JSON.parse(el.textContent) : null; } catch (e) { return null; } })();
+if (ZIEL) { HEUTE = (function (d) { return d.getFullYear() + "-" + (d.getMonth() < 9 ? "0" : "") + (d.getMonth() + 1) + "-" + (d.getDate() < 10 ? "0" : "") + d.getDate(); })(new Date()); _zufall = true; }
+var S = ZIEL ? { kunden: [], aufgaben: [] } : (laden() || beispielStand());
 S.seite = "heute"; S.kunde = null; S.reiter = "ueberblick"; S.termin = null; S.kundensicht = false;
 S.offen = {}; S.neu = null; S.nb = null; S.blatt = null; S.terminForm = false; S.suche = "";
 S.fhZiel = {}; S.fhText = {}; S.warteWahl = null;
@@ -1213,6 +1253,7 @@ function laden() {
   } catch (e) { return null; }
 }
 function speichern() {
+  if (KONTO) { KONTO.merken(); return; }
   try { sessionStorage.setItem(SPEICHER, JSON.stringify({ id: _id, kunden: S.kunden, aufgaben: S.aufgaben })); } catch (e) { /* ohne Speicher geht es auch */ }
 }
 
@@ -1242,7 +1283,8 @@ function go(seite, opt) {
 }
 
 function render(rein) {
-  var html = { heute: seiteHeute, kunden: seiteKunden, neu: seiteNeuerKunde, akte: seiteAkte, termin: seiteTermin, nach: seiteNach, aufgaben: seiteAufgaben }[S.seite]();
+  if (KONTO) { document.documentElement.toggleAttribute("data-tor", !KONTO.bereit); KONTO.verknuepfen(); }
+  var html = { tor: seiteTor, laedt: seiteLaedt, heute: seiteHeute, kunden: seiteKunden, neu: seiteNeuerKunde, akte: seiteAkte, termin: seiteTermin, nach: seiteNach, aufgaben: seiteAufgaben }[S.seite]();
   app.innerHTML = '<div class="' + (rein ? "seite" : "") + '">' + html + "</div>";
   kopf();
   mailHoehe();
@@ -1250,7 +1292,8 @@ function render(rein) {
   document.querySelectorAll(".umschalter").forEach(gleiter);
   document.querySelectorAll('[data-auto]').forEach(autoHoehe);
   markenOrdnen();
-  speichern();
+  if (!KONTO || KONTO.bereit) { speichern(); }
+  kontoStand();
   S.neu = null;
 }
 
@@ -1301,6 +1344,9 @@ function seiteHeute() {
   t.push('<div class="schmal"><div class="ansage"><div><h1>' + WOCHENTAG[h.getDay()] + ", " + h.getDate() + ". " + MONAT[h.getMonth()] + "</h1>");
   t.push("<p>" + [offen.length + (offen.length === 1 ? " Termin" : " Termine") + " nachbereiten", spaet.length + " nachfragen", offenBeiMir() + " Punkte bei mir"].join(" · ") + "</p></div></div>");
 
+  if (!S.kunden.length) {
+    t.push('<div class="karte leer-start"><b>Noch keine Kunden</b><span class="leise">Leg den ersten an. Termine, Mitschriften, Finanzen und Aufgaben hängen dann an seiner Akte, die Aufgaben stehen auch in Klar.</span><button type="button" class="knopf akzent" data-geh="neu">Neuer Kunde</button></div>');
+  }
   t.push('<section class="abschnitt"><h2>Nachbereiten</h2>');
   if (!offen.length) { t.push('<p class="leer">Alle Termine sind nachbereitet.</p>'); }
   offen.forEach(function (o) {
@@ -2041,8 +2087,15 @@ document.addEventListener("click", function (e) {
   var b = e.target.closest("button"); if (!b) { return; }
   var d = b.dataset;
   if (b.id === "entwurf-knopf") {
-    var box = document.getElementById("entwurf-text"); box.hidden = !box.hidden; b.setAttribute("aria-expanded", String(!box.hidden)); return;
+    var box = document.getElementById("entwurf-text");
+    if (KONTO && box.hidden) {
+      box.innerHTML = "<p>Angemeldet als <b>" + esc((KONTO.nutzer && KONTO.nutzer.email) || "") + '</b>.</p><p class="konto-stand" id="konto-stand"></p>' +
+        '<p>Die Aufgaben stehen auch in <a href="https://lulkasss.github.io/klar/" target="_blank" rel="noopener">Klar</a>.</p><button type="button" class="knopf still klein" id="abmelden">Abmelden</button>';
+      kontoStand();
+    }
+    box.hidden = !box.hidden; b.setAttribute("aria-expanded", String(!box.hidden)); return;
   }
+  if (b.id === "abmelden") { document.getElementById("entwurf-text").hidden = true; KONTO.abmelden(); return; }
   if (!b.closest("#entwurf-text")) { document.getElementById("entwurf-text").hidden = true; }
   if (b.id === "zuruecksetzen") {
     try { sessionStorage.removeItem(SPEICHER); } catch (err) { /* egal */ }
@@ -2164,6 +2217,7 @@ document.addEventListener("click", function (e) {
 });
 
 document.addEventListener("submit", function (e) {
+  if (e.target.id === "tor-form") { e.preventDefault(); KONTO.anmelden(e.target.mail.value.trim(), e.target.pw.value); return; }
   if (e.target.id !== "kunde-form") { return; }
   e.preventDefault();
   var f = e.target, wahl = f.querySelector('#nk-taetigkeit [aria-pressed="true"]');
@@ -2264,7 +2318,317 @@ document.addEventListener("focusin", tippZeigen);
 document.addEventListener("mouseout", tippWeg);
 document.addEventListener("focusout", tippWeg);
 
-render(true);
+/* ================= Konto: die echte Fassung =================
+   Nur wenn der Bau ein Ziel mitgibt (#wolkeziel aus wolke.json, siehe scripts/bauen.mjs). Dieselbe Anmeldung
+   und dieselbe Tabelle wie Klar (klar_dokumente, je Nutzer nur die eigenen Zeilen, supabase/schema.sql in Klar).
+   Die Zentrale hat ihr eigenes Dokument zentrale/aktuell (Kunden mit Themen, Terminen, Finanzen, Verlauf).
+   Die Aufgaben liegen in Klars stand/aktuell und werden dort gelesen und geschrieben:
+   - vor dem ersten Schreiben je Sitzung eine Sicherung „vor Zentrale“ (Klars sicherungen, Klar hält 12),
+   - geschrieben wird nur, wenn Klar seit dem Lesen nicht gespeichert hat, sonst neu lesen und zusammenführen,
+   - was Klar live ändert, kommt herein und wird mit offenen Änderungen hier zusammengeführt. */
+var KONTO = (function () {
+  if (!ZIEL || !ZIEL.url || !ZIEL.key) { return null; }
+  var T = "klar_dokumente", sb = null, nutzer = null, kanal = null, uhr = null, nachher = null;
+  var k = { bereit: false, nutzer: null, meldung: "", arbeitet: false, status: "verbindet", fehler: "" };
+  var zent = { zuletzt: null, gespeichert: null };
+  var klar = { zuletzt: null, basis: {}, gesichert: false, alle: [], geschrieben: {}, vorher: {} };
+  var GERAET = (function () {
+    try { var g = localStorage.getItem("zentrale.geraet"); if (!g) { g = "z-" + Math.random().toString(36).slice(2, 10); localStorage.setItem("zentrale.geraet", g); } return g; } catch (e) { return "z-" + Math.random().toString(36).slice(2, 10); }
+  })();
+  var GERAETNAME = /iPhone|Android/.test(navigator.userAgent) ? "Handy" : /iPad/.test(navigator.userAgent) ? "iPad" : "Rechner";
+  var KLAR_LEER = { fassung: 12, eintraege: [], aufgaben: [], cluster: [], mitschriften: [], reihen: [], vorschlaege: [], lagebericht: null, lernen: null, zuletzt: null };
+
+  function bibliothek() {
+    if (window.__zentraleSupabase) { return Promise.resolve(window.__zentraleSupabase); }
+    return import("https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/+esm");
+  }
+  function pruef(r) { if (r && r.error) { throw r.error; } return r; }
+  function lies(sammlung, id) {
+    return sb.from(T).select("daten").eq("user_id", nutzer.id).eq("sammlung", sammlung).eq("id", id).maybeSingle()
+      .then(function (r) { pruef(r); return r.data ? r.data.daten : null; });
+  }
+  function sicherung(koerper, grund) {
+    var d = {}; Object.keys(koerper).forEach(function (n) { d[n] = koerper[n]; });
+    d.grund = grund; d.gesichertAm = new Date().toISOString();
+    return sb.from(T).upsert({ user_id: nutzer.id, sammlung: "sicherungen", id: d.gesichertAm.replace(/[:.]/g, "-"), daten: d, geaendert: d.gesichertAm }).then(pruef);
+  }
+  /* Nicht mitten ins Tippen hineinzeichnen: gewartet wird, bis drei Sekunden lang nichts getippt wurde. */
+  var letzteEingabe = 0;
+  document.addEventListener("input", function () { letzteEingabe = Date.now(); }, true);
+  function tippt() { return Date.now() - letzteEingabe < 3000; }
+  function neuZeichnen() {
+    if (tippt()) { clearTimeout(nachher); nachher = setTimeout(neuZeichnen, 3000); return; }
+    render(false);
+  }
+
+  /* ---------- Zentrale: Kunden ---------- */
+  function zentraleOffen() { return zent.gespeichert !== null && JSON.stringify(S.kunden) !== zent.gespeichert; }
+  function zentraleHerein(d) {
+    if (!d || !d.stand) { if (zent.gespeichert === null) { zent.gespeichert = JSON.stringify(S.kunden); } return false; }
+    if (d.zuletzt === zent.zuletzt || d.zuletzt === zent.schreibt) { return false; }
+    var neu = null; try { neu = JSON.parse(d.stand); } catch (e) { return false; }
+    if (zentraleOffen()) {
+      sicherung(d, "Zentrale von " + (d.geraetname || "anderem Gerät")).catch(function () {});
+      toast("Auf einem anderen Gerät wurde in der Zentrale gearbeitet. Dein Stand hier bleibt, der andere liegt als Sicherung im Konto.");
+      zent.zuletzt = d.zuletzt;
+      return false;
+    }
+    S.kunden = neu.kunden || [];
+    zent.zuletzt = d.zuletzt; zent.gespeichert = JSON.stringify(S.kunden);
+    return true;
+  }
+  function zentraleSchreiben() {
+    if (!zentraleOffen()) { return Promise.resolve(); }
+    var snap = JSON.stringify(S.kunden), roh = JSON.stringify({ fassung: 1, kunden: S.kunden }), jetzt = new Date().toISOString();
+    var daten = { stand: roh, zuletzt: jetzt, geraet: GERAET, geraetname: GERAETNAME, kunden: S.kunden.length, groesse: roh.length };
+    zent.schreibt = jetzt;
+    return sb.from(T).upsert({ user_id: nutzer.id, sammlung: "zentrale", id: "aktuell", daten: daten, geaendert: jetzt }).then(function (r) {
+      pruef(r); zent.zuletzt = jetzt; zent.gespeichert = snap;
+    });
+  }
+
+  /* ---------- Klar: Aufgaben ---------- */
+  function namensKunde(a) {
+    var t = String(a.titel || "").trim().toLowerCase();
+    return S.kunden.filter(function (x) { return t === "@" + x.name.toLowerCase() || t.indexOf("@" + x.name.toLowerCase() + " ") === 0 || t.indexOf("@" + x.name.toLowerCase() + ":") === 0; })[0];
+  }
+  /* Eine Klar-Aufgabe gehört zu einem Kunden, wenn sie seine Kennung trägt oder „@Name“ heißt. */
+  function zuKunde(a) {
+    if (a.kunde && S.kunden.some(function (x) { return x.id === a.kunde; })) { return true; }
+    var x = namensKunde(a);
+    if (x) { a.kunde = x.id; return true; }
+    return false;
+  }
+  function ersetzen(ziel, quelle) { Object.keys(ziel).forEach(function (n) { delete ziel[n]; }); Object.keys(quelle).forEach(function (n) { ziel[n] = quelle[n]; }); }
+  function klarHerein(d) {
+    if (d && d.zuletzt && (d.zuletzt === klar.zuletzt || d.zuletzt === klar.schreibt)) { return false; }
+    var z = KLAR_LEER;
+    if (d && d.stand) { try { z = JSON.parse(d.stand); } catch (e) { return false; } }
+    klar.zuletzt = d ? d.zuletzt : null;
+    klar.alle = z.aufgaben || [];
+    var hier = {}; S.aufgaben.forEach(function (a) { hier[a.id] = a; });
+    var liste = [];
+    (z.aufgaben || []).forEach(function (ta) {
+      var l = hier[ta.id], b = klar.basis[ta.id], roh = JSON.stringify(ta);
+      /* Hat Klar mit einem älteren Stand über unseren geschrieben (dort war gerade eigene Arbeit offen),
+         bleibt unsere Fassung hier stehen und geht gleich nochmal raus. */
+      if (klar.geschrieben[ta.id] !== undefined) {
+        if (roh === klar.geschrieben[ta.id]) { delete klar.geschrieben[ta.id]; delete klar.vorher[ta.id]; }
+        else if (l && klar.vorher[ta.id] !== undefined && roh === klar.vorher[ta.id]) { klar.basis[ta.id] = roh; liste.push(l); delete hier[ta.id]; return; }
+        else { delete klar.geschrieben[ta.id]; delete klar.vorher[ta.id]; }
+      }
+      if (l) {
+        var offen = b !== undefined && JSON.stringify(l) !== b;
+        ersetzen(l, offen ? zusammenfuehren(ta, JSON.parse(b), l) : klon(ta));
+        klar.basis[ta.id] = JSON.stringify(ta);
+        liste.push(l); delete hier[ta.id];
+      } else {
+        var neu = klon(ta);
+        klar.basis[ta.id] = JSON.stringify(ta);
+        if (zuKunde(neu)) { liste.push(neu); }
+      }
+    });
+    /* Hier neu angelegt und noch nicht in Klar: bleibt. In Klar gelöscht: ist weg. */
+    Object.keys(hier).forEach(function (id) {
+      if (klar.basis[id] === undefined) { liste.push(hier[id]); }
+      else if (klar.geschrieben[id] !== undefined && klar.vorher[id] === undefined) { delete klar.basis[id]; liste.push(hier[id]); }
+      else { delete klar.basis[id]; }
+    });
+    S.aufgaben = liste;
+    return true;
+  }
+  /* Neu angelegter Kunde: passende Klar-Aufgaben („@Name“) dazuholen. */
+  k.verknuepfen = function () {
+    if (!k.bereit) { return; }
+    var da = {}; S.aufgaben.forEach(function (a) { da[a.id] = 1; });
+    klar.alle.forEach(function (ta) { if (!da[ta.id]) { var neu = klon(ta); if (zuKunde(neu)) { S.aufgaben.push(neu); } } });
+  };
+  function klarGeaendert() { return S.aufgaben.filter(function (a) { return JSON.stringify(a) !== klar.basis[a.id]; }); }
+  function klarSchreiben(versuch) {
+    versuch = versuch || 0;
+    var liste = klarGeaendert();
+    if (!liste.length) { return Promise.resolve(); }
+    var snap = {}; liste.forEach(function (a) { snap[a.id] = JSON.stringify(a); });
+    var alt = null;
+    return lies("stand", "aktuell").then(function (d) {
+      alt = d;
+      return alt && !klar.gesichert ? sicherung(alt, "vor Zentrale") : null;
+    }).then(function () {
+      klar.gesichert = true;
+      var z = alt && alt.stand ? JSON.parse(alt.stand) : klon(KLAR_LEER), geschrieben = {};
+      z.aufgaben = z.aufgaben || [];
+      liste.forEach(function (a) {
+        var mine = JSON.parse(snap[a.id]), b = klar.basis[a.id] !== undefined ? JSON.parse(klar.basis[a.id]) : null, i = -1;
+        z.aufgaben.forEach(function (x, j) { if (x.id === a.id) { i = j; } });
+        if (i < 0) { if (!b) { z.aufgaben.push(mine); geschrieben[a.id] = mine; } }
+        else { z.aufgaben[i] = zusammenfuehren(z.aufgaben[i], b, mine); geschrieben[a.id] = z.aufgaben[i]; }
+      });
+      if (Array.isArray(z.cluster) && z.cluster.indexOf("Kunden") < 0) { z.cluster.push("Kunden"); }
+      var jetzt = new Date().toISOString(); z.zuletzt = jetzt;
+      var roh = JSON.stringify(z);
+      var daten = { stand: roh, zuletzt: jetzt, geraet: "zentrale", geraetname: "Zentrale", aufgaben: z.aufgaben.length, gesichertAm: jetzt, groesse: roh.length };
+      klar.schreibt = jetzt;
+      var w = alt
+        ? sb.from(T).update({ daten: daten, geaendert: jetzt }).eq("user_id", nutzer.id).eq("sammlung", "stand").eq("id", "aktuell").eq("daten->>zuletzt", alt.zuletzt).select("id")
+        : sb.from(T).insert({ user_id: nutzer.id, sammlung: "stand", id: "aktuell", daten: daten, geaendert: jetzt }).select("id");
+      return w.then(function (r) {
+        if (r.error || !r.data || !r.data.length) {
+          if (versuch < 3) { return klarSchreiben(versuch + 1); }
+          throw r.error || new Error("Klar wurde gerade gleichzeitig gespeichert.");
+        }
+        klar.zuletzt = jetzt;
+        Object.keys(geschrieben).forEach(function (id) {
+          var a = S.aufgaben.filter(function (x) { return x.id === id; })[0], g = geschrieben[id];
+          klar.vorher[id] = klar.basis[id]; klar.geschrieben[id] = JSON.stringify(g);
+          klar.basis[id] = JSON.stringify(g);
+          if (a) { ersetzen(a, JSON.stringify(a) === snap[id] ? klon(g) : zusammenfuehren(g, JSON.parse(snap[id]), a)); }
+        });
+      });
+    });
+  }
+
+  /* ---------- Speichern ---------- */
+  k.offen = function () { return k.bereit && (zentraleOffen() || klarGeaendert().length > 0); };
+  k.merken = function () {
+    if (!k.bereit) { return; }
+    if (!k.offen()) { if (k.status === "speichert") { k.status = "gespeichert"; kontoStand(); } return; }
+    k.status = "speichert"; kontoStand();
+    clearTimeout(uhr); uhr = setTimeout(k.jetzt, 1200);
+  };
+  /* Immer nur ein Speichervorgang zugleich; was währenddessen dazukommt, geht danach raus. */
+  var laeuft = null;
+  k.jetzt = function () {
+    clearTimeout(uhr);
+    if (laeuft) { return laeuft; }
+    laeuft = zentraleSchreiben().then(function () { return klarSchreiben(); }).then(function () {
+      laeuft = null;
+      k.fehler = ""; k.status = k.offen() ? "speichert" : "gespeichert"; kontoStand();
+      if (k.offen()) { uhr = setTimeout(k.jetzt, 1200); }
+    }).catch(function (e) {
+      laeuft = null;
+      k.fehler = (e && e.message) || "unbekannt"; k.status = "fehler"; kontoStand();
+      clearTimeout(uhr); uhr = setTimeout(k.jetzt, 10000);
+    });
+    return laeuft;
+  };
+
+  /* ---------- Holen und live mithören ---------- */
+  function holen(was) {
+    if (!nutzer) { return Promise.resolve(); }
+    var z = was !== "stand" ? lies("zentrale", "aktuell").then(zentraleHerein) : Promise.resolve(false);
+    return z.then(function (a) {
+      return (was !== "zentrale" ? lies("stand", "aktuell").then(klarHerein) : Promise.resolve(false)).then(function (b) { return a || b; });
+    }).then(function (anders) {
+      if (anders && k.bereit) { neuZeichnen(); k.merken(); }
+      if (k.status === "fehler") { k.merken(); }
+    }).catch(function (e) { k.fehler = (e && e.message) || "keine Verbindung"; k.status = "fehler"; kontoStand(); });
+  }
+  function horchen() {
+    if (kanal) { try { sb.removeChannel(kanal); } catch (e) {} }
+    kanal = sb.channel("zentrale-" + nutzer.id).on("postgres_changes", { event: "*", schema: "public", table: T, filter: "user_id=eq." + nutzer.id }, function (e) {
+      var z = e && (e["new"] && e["new"].sammlung ? e["new"] : e.old);
+      if (!z) { return; }
+      var zl = z.daten && z.daten.zuletzt;
+      if (z.sammlung === "stand" && z.id === "aktuell" && !(zl && (zl === klar.zuletzt || zl === klar.schreibt))) { holen("stand"); }
+      if (z.sammlung === "zentrale" && z.id === "aktuell" && !(zl && (zl === zent.zuletzt || zl === zent.schreibt))) { holen("zentrale"); }
+    }).subscribe();
+  }
+  document.addEventListener("visibilitychange", function () { if (nutzer && document.visibilityState === "visible") { holen(); } });
+  window.addEventListener("online", function () { if (nutzer) { holen(); } });
+  /* Sicherheitsleine, falls die Live-Verbindung eingeschlafen ist: alle 20 Sekunden nur die Uhrzeiten lesen. */
+  setInterval(function () {
+    if (!nutzer || !k.bereit || document.visibilityState !== "visible") { return; }
+    [["stand", klar], ["zentrale", zent]].forEach(function (x) {
+      sb.from(T).select("zuletzt:daten->>zuletzt").eq("user_id", nutzer.id).eq("sammlung", x[0]).eq("id", "aktuell").maybeSingle().then(function (r) {
+        if (!r || r.error || !r.data) { return; }
+        var z = r.data.zuletzt || (r.data.daten && r.data.daten.zuletzt);
+        if (z && z !== x[1].zuletzt && z !== x[1].schreibt) { holen(x[0]); }
+      }, function () {});
+    });
+  }, 20000);
+  window.addEventListener("beforeunload", function (e) { if (k.offen()) { k.jetzt(); e.preventDefault(); e.returnValue = ""; } });
+
+  function verbunden(u) {
+    if (nutzer && nutzer.id === u.id) { return; }
+    nutzer = u; k.nutzer = u; k.meldung = ""; k.arbeitet = false;
+    S.seite = "laedt"; render(true);
+    horchen();
+    lies("zentrale", "aktuell").then(zentraleHerein).then(function () { return lies("stand", "aktuell"); }).then(klarHerein).then(function () {
+      k.bereit = true; k.status = "gespeichert";
+      if (zent.gespeichert === null) { zent.gespeichert = JSON.stringify(S.kunden); }
+      go("heute");
+      k.merken();
+    }).catch(function (e) { k.meldung = "Laden hat nicht geklappt: " + ((e && e.message) || "keine Verbindung") + ". Gleich nochmal versuchen."; nutzer = null; S.seite = "tor"; render(true); });
+  }
+  function fehlerText(e) {
+    var m = (e && (e.message || e.error_description)) || "";
+    if (/Invalid login credentials/i.test(m)) { return "E-Mail oder Passwort stimmt nicht."; }
+    if (/Email not confirmed/i.test(m)) { return "Die E-Mail-Adresse ist noch nicht bestätigt."; }
+    if (/fetch|network/i.test(m)) { return "Keine Verbindung. Später nochmal versuchen."; }
+    return m || "Das hat nicht geklappt.";
+  }
+  k.start = function () {
+    S.seite = "laedt"; render(true);
+    bibliothek().then(function (mod) {
+      sb = mod.createClient(ZIEL.url, ZIEL.key, { auth: { persistSession: true, autoRefreshToken: true, storageKey: "klar.anmeldung" } });
+      sb.auth.onAuthStateChange(function (ereignis, sitzung) { if (sitzung && sitzung.user) { setTimeout(function () { verbunden(sitzung.user); }, 0); } });
+      return sb.auth.getSession();
+    }).then(function (r) {
+      var s = r && r.data && r.data.session;
+      if (s && s.user) { verbunden(s.user); } else { S.seite = "tor"; render(true); }
+    }).catch(function () { k.meldung = "Keine Verbindung. Sobald du wieder online bist, neu laden."; S.seite = "tor"; render(true); });
+  };
+  k.anmelden = function (mail, pw) {
+    if (!sb) { return; }
+    k.arbeitet = true; k.meldung = ""; torNachziehen();
+    sb.auth.signInWithPassword({ email: mail, password: pw }).then(function (r) {
+      k.arbeitet = false;
+      if (r.error) { throw r.error; }
+      if (r.data && r.data.user) { verbunden(r.data.user); }
+    }).catch(function (e) { k.arbeitet = false; k.meldung = fehlerText(e); torNachziehen(); });
+  };
+  k.abmelden = function (versuch) {
+    versuch = versuch || 0;
+    if (k.offen() && versuch < 20) { if (versuch === 0) { k.jetzt(); toast("Einen Moment, das Letzte wird noch gespeichert …"); } setTimeout(function () { k.abmelden(versuch + 1); }, 500); return; }
+    if (k.offen()) { toast("Abmelden geht erst, wenn alles gespeichert ist. Gerade fehlt die Verbindung."); return; }
+    if (kanal) { try { sb.removeChannel(kanal); } catch (e) {} kanal = null; }
+    sb.auth.signOut().catch(function () {});
+    nutzer = null; k.nutzer = null; k.bereit = false;
+    S.kunden = []; S.aufgaben = []; klar = { zuletzt: null, basis: {}, gesichert: false, alle: [], geschrieben: {}, vorher: {} }; zent = { zuletzt: null, gespeichert: null };
+    k.meldung = "Abgemeldet."; S.seite = "tor"; render(true);
+  };
+  k.statusText = function () {
+    return k.status === "fehler" ? "Gerade nicht gespeichert, keine Verbindung. Es geht raus, sobald es wieder klappt."
+      : k.status === "speichert" ? "Speichert …" : k.status === "verbindet" ? "Verbindet …" : "Alles gespeichert, auch in Klar.";
+  };
+  return k;
+})();
+
+/* Stand oben rechts: kleiner Punkt am Konto-Knopf, Text im Fach. */
+function kontoStand() {
+  var b = document.getElementById("entwurf-knopf");
+  if (!KONTO || !b) { return; }
+  b.dataset.status = KONTO.status;
+  var t = document.getElementById("konto-stand"); if (t) { t.textContent = KONTO.statusText(); t.dataset.status = KONTO.status; }
+}
+
+function seiteTor() {
+  var k = KONTO;
+  return '<div class="tor"><form class="karte tor-karte" id="tor-form" novalidate><h1>Zentrale</h1><p class="leise">Melde dich mit deinem Klar-Konto an. Kunden und Aufgaben sind dann auf jedem Gerät da, die Aufgaben auch in Klar.</p>' +
+    '<input class="feld" id="tor-mail" name="mail" type="email" autocomplete="email" placeholder="E-Mail" aria-label="E-Mail">' +
+    '<input class="feld" id="tor-pw" name="pw" type="password" autocomplete="current-password" placeholder="Passwort" aria-label="Passwort">' +
+    '<button type="submit" class="knopf akzent"' + (k.arbeitet ? " disabled" : "") + ">" + (k.arbeitet ? "Meldet an …" : "Anmelden") + "</button>" +
+    '<p class="tor-meldung" role="status">' + esc(k.meldung) + "</p></form></div>";
+}
+/* Nur Meldung und Knopf nachziehen, damit Getipptes stehen bleibt. */
+function torNachziehen() {
+  var m = app.querySelector(".tor-meldung"), b = app.querySelector('#tor-form [type="submit"]');
+  if (m) { m.textContent = KONTO.meldung; }
+  if (b) { b.disabled = KONTO.arbeitet; b.textContent = KONTO.arbeitet ? "Meldet an …" : "Anmelden"; }
+}
+function seiteLaedt() { return '<div class="tor"><p class="leise">Verbindet mit deinem Konto …</p></div>'; }
+
+if (KONTO) { document.getElementById("entwurf-knopf").textContent = "Konto"; KONTO.start(); } else { render(true); }
 if (document.fonts && document.fonts.ready) { document.fonts.ready.then(function () { kopf(); app.querySelectorAll(".umschalter").forEach(gleiter); markenOrdnen(); }); }
 </script>
 </body>
