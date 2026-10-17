@@ -9,8 +9,9 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600;700&display=swap">
 <style>
-/* Aufbau: eine Spalte zum Lesen (Kunden, Aufgaben), die Kundenseite mit Themen links und
-   Verlauf rechts, das Nachbereiten als Fragen nacheinander. Tokens nach dem Skill app-ui. */
+/* Aufbau: oben Heute · Kunden · Aufgaben. Herzstück ist die Kundenakte mit Überblick (Themen),
+   Finanzen, Terminen samt Mitschrift, Aufgaben (wie in Klar) und Verlauf. Nachbereiten fragt
+   Thema für Thema. Tokens nach dem Skill app-ui. */
 
 /* ============ Tokens ============ */
 :root {
@@ -28,6 +29,11 @@
   /* Stand eines Themas: bei mir = Flieder voll, beim Kunden = Flieder schraffiert,
      nächstes Mal = grau umrandet, erledigt = grün. Immer mit Wort daneben. */
   --st-mir:var(--accent); --st-kunde:var(--accent); --st-naechstes:var(--surface-3); --st-erledigt:var(--ok);
+  /* Töpfe im Finanzbalken */
+  --topf-fix:#7F5FE8; --topf-fix-ink:#FFFFFF;
+  --topf-vers:#B9A8F3; --topf-vers-ink:#24154F;
+  --topf-leben:#D3D3DC; --topf-leben-ink:#2A2A33;
+  --topf-spar:#26925F; --topf-spar-ink:#FFFFFF;
 }
 @media (prefers-color-scheme: dark) {
   :root:not([data-theme="light"]) {
@@ -40,6 +46,10 @@
     --gap-ink:#F2555A; --ok-ink:#3DB67A;
     --glas:rgba(9,9,11,.78);
     --shadow:0 0 0 1px rgba(255,255,255,.045),0 1px 2px rgba(0,0,0,.3),0 10px 30px -8px rgba(0,0,0,.5);
+    --topf-fix:#A78BFA; --topf-fix-ink:#0B0B0F;
+    --topf-vers:#5F4FA6; --topf-vers-ink:#EEEEF1;
+    --topf-leben:#3A3A44; --topf-leben-ink:#EEEEF1;
+    --topf-spar:#3DB67A; --topf-spar-ink:#0B0B0F;
   }
 }
 :root[data-theme="dark"] {
@@ -52,6 +62,10 @@
   --gap-ink:#F2555A; --ok-ink:#3DB67A;
   --glas:rgba(9,9,11,.78);
   --shadow:0 0 0 1px rgba(255,255,255,.045),0 1px 2px rgba(0,0,0,.3),0 10px 30px -8px rgba(0,0,0,.5);
+  --topf-fix:#A78BFA; --topf-fix-ink:#0B0B0F;
+  --topf-vers:#5F4FA6; --topf-vers-ink:#EEEEF1;
+  --topf-leben:#3A3A44; --topf-leben-ink:#EEEEF1;
+  --topf-spar:#3DB67A; --topf-spar-ink:#0B0B0F;
 }
 
 /* ============ Grundlagen ============ */
@@ -63,7 +77,7 @@ body {
   font-variant-numeric:tabular-nums; -webkit-font-smoothing:antialiased;
 }
 body::before { content:""; position:fixed; inset:0 0 auto; height:env(safe-area-inset-top, 0px); z-index:10; background:var(--glas); }
-button, input, textarea { font:inherit; color:inherit; }
+button, input, textarea, select { font:inherit; color:inherit; }
 button { cursor:pointer; -webkit-tap-highlight-color:transparent; }
 h1, h2, h3 { margin:0; font-weight:600; text-wrap:balance; letter-spacing:-.01em; }
 p { margin:0; }
@@ -73,10 +87,13 @@ p { margin:0; }
 
 /* ============ Bausteine ============ */
 .karte { background:var(--surface); border-radius:var(--r); box-shadow:var(--shadow); padding:22px; }
+.karte > h2 { font-size:15px; margin-bottom:12px; }
+.karte-kopf { display:flex; align-items:baseline; justify-content:space-between; gap:12px; margin-bottom:12px; }
+.karte-kopf h2 { font-size:15px; }
 
 .knopf {
   display:inline-flex; align-items:center; justify-content:center; gap:8px; height:44px; padding:0 20px;
-  border:none; border-radius:999px; background:var(--fg); color:var(--bg); font-weight:600; font-size:15px;
+  border:none; border-radius:999px; background:var(--fg); color:var(--bg); font-weight:600; font-size:15px; white-space:nowrap;
   transition:transform .12s var(--ease), opacity .2s;
 }
 .knopf:active { transform:scale(.96); }
@@ -84,8 +101,10 @@ p { margin:0; }
 .knopf.akzent { background:var(--accent); color:var(--on-accent); }
 .knopf.still { background:var(--surface-2); color:var(--fg); font-weight:500; }
 .knopf.klein { height:34px; padding:0 14px; font-size:13.5px; }
+.textknopf { border:none; background:none; padding:0; color:var(--accent-ink); font-weight:500; font-size:14px; }
+.textknopf:hover { text-decoration:underline; }
 
-.umschalter { display:inline-flex; position:relative; padding:4px; background:var(--surface-2); border-radius:999px; gap:2px; }
+.umschalter { display:inline-flex; position:relative; padding:4px; background:var(--surface-2); border-radius:999px; gap:2px; max-width:100%; }
 .umschalter button {
   position:relative; z-index:1; border:none; background:none; height:34px; padding:0 16px; border-radius:999px;
   color:var(--fg-3); font-weight:500; font-size:14px; white-space:nowrap; display:inline-flex; align-items:center; gap:7px;
@@ -98,21 +117,21 @@ p { margin:0; }
 }
 .zahl-klein { font-size:12px; font-weight:600; min-width:20px; height:20px; padding:0 6px; border-radius:999px; background:var(--accent-soft); color:var(--accent-ink); display:inline-grid; place-items:center; }
 
-/* Stand-Pille: Wort plus Farbe, schraffiert = liegt beim Kunden */
 .stand {
   display:inline-flex; align-items:center; gap:7px; height:26px; padding:0 11px 0 9px; border-radius:999px;
   font-size:12.5px; font-weight:500; white-space:nowrap; background:var(--surface-2); color:var(--fg-2);
 }
 .stand::before { content:""; width:10px; height:10px; border-radius:50%; flex:none; }
-.stand[data-st="mir"] { background:var(--accent-soft); color:var(--accent-ink); }
+.stand[data-st="mir"], .stand[data-st="kunde"] { background:var(--accent-soft); color:var(--accent-ink); }
 .stand[data-st="mir"]::before { background:var(--st-mir); }
-.stand[data-st="kunde"] { background:var(--accent-soft); color:var(--accent-ink); }
 .stand[data-st="kunde"]::before { background:repeating-linear-gradient(135deg, var(--st-kunde) 0 2px, transparent 2px 4px); box-shadow:inset 0 0 0 1.5px var(--st-kunde); }
 .stand[data-st="naechstes"]::before { background:var(--st-naechstes); box-shadow:inset 0 0 0 1.5px var(--line-2); }
 .stand[data-st="erledigt"] { background:var(--ok-soft); color:var(--ok-ink); }
 .stand[data-st="erledigt"]::before { background:var(--st-erledigt); }
+.stand[data-st="offen"] { background:var(--gap-soft); color:var(--gap-ink); }
+.stand[data-st="offen"]::before { background:var(--gap); }
+.stand[data-st="geplant"]::before { background:transparent; box-shadow:inset 0 0 0 1.5px var(--fg-3); }
 
-/* kleines Kästchen je Thema in der Kundenliste */
 .punktreihe { display:flex; gap:4px; flex-wrap:wrap; }
 .punktreihe i { width:14px; height:14px; border-radius:4px; display:block; background:var(--surface-3); box-shadow:inset 0 0 0 1.5px var(--line-2); }
 .punktreihe i[data-st="mir"] { background:var(--st-mir); box-shadow:none; }
@@ -129,11 +148,16 @@ p { margin:0; }
 .haken[aria-checked="true"] svg { stroke-dashoffset:0; }
 
 .feld {
-  width:100%; border:none; border-radius:var(--r-s); background:var(--surface-2); padding:11px 14px; font-size:15px;
+  width:100%; border:none; border-radius:var(--r-s); background:var(--surface-2); padding:11px 14px; font-size:15px; min-height:44px;
   transition:background .2s, box-shadow .2s;
 }
 .feld:focus { outline:none; background:var(--surface); box-shadow:0 0 0 1.5px var(--accent-line), 0 0 0 5px var(--accent-soft); }
 textarea.feld { resize:vertical; line-height:1.55; }
+.feld-gruppe { display:flex; flex-direction:column; gap:6px; min-width:0; }
+.beschriftung { font-size:13px; color:var(--fg-3); font-weight:500; display:block; }
+.betrag { position:relative; }
+.betrag .feld { text-align:right; padding-right:30px; }
+.betrag::after { content:"€"; position:absolute; right:13px; top:50%; transform:translateY(-50%); color:var(--fg-3); font-size:14px; pointer-events:none; }
 
 .chip {
   display:inline-flex; align-items:center; gap:7px; height:36px; padding:0 15px; border:none; border-radius:999px;
@@ -141,7 +165,8 @@ textarea.feld { resize:vertical; line-height:1.55; }
 }
 .chip:active { transform:scale(.96); }
 .chip[aria-pressed="true"] { background:var(--accent); color:var(--on-accent); }
-.chip .herkunft { width:6px; height:6px; border-radius:50%; background:currentColor; opacity:.55; }
+.chip.plus { height:30px; padding:0 12px; font-size:13px; }
+.chips { display:flex; flex-wrap:wrap; gap:8px; }
 
 .toast {
   position:fixed; left:50%; bottom:calc(24px + env(safe-area-inset-bottom, 0px)); z-index:30;
@@ -150,6 +175,29 @@ textarea.feld { resize:vertical; line-height:1.55; }
   box-shadow:var(--shadow); transition:opacity .25s, transform .45s var(--spring); max-width:calc(100% - 32px);
 }
 .toast.da { opacity:1; transform:translate(-50%, 0); }
+
+/* Finanzbalken: ein Monat Einkommen, aufgeteilt in Töpfe */
+.balken { display:flex; gap:3px; height:44px; border-radius:12px; overflow:hidden; background:var(--surface-2); }
+.balken.klein { height:12px; border-radius:6px; gap:2px; }
+.balken i { display:flex; align-items:center; padding:0 10px; font-style:normal; font-size:12.5px; font-weight:600; white-space:nowrap; overflow:hidden; min-width:0; transition:flex-grow .6s var(--ease); }
+.balken.klein i { padding:0; }
+.balken i[data-t="fix"] { background:var(--topf-fix); color:var(--topf-fix-ink); }
+.balken i[data-t="vers"] { background:var(--topf-vers); color:var(--topf-vers-ink); }
+.balken i[data-t="leben"] { background:var(--topf-leben); color:var(--topf-leben-ink); }
+.balken i[data-t="spar"] { background:var(--topf-spar); color:var(--topf-spar-ink); }
+.balken i[data-t="frei"] { background:transparent; color:var(--fg-2); }
+.balken i[data-t="fehlt"] { background:repeating-linear-gradient(135deg, var(--gap-soft) 0 6px, transparent 6px 12px); color:var(--gap-ink); }
+.topf-punkt { width:10px; height:10px; border-radius:3px; display:inline-block; flex:none; }
+.topf-punkt[data-t="ein"] { background:var(--fg-2); }
+.topf-punkt[data-t="fix"] { background:var(--topf-fix); }
+.topf-punkt[data-t="vers"] { background:var(--topf-vers); }
+.topf-punkt[data-t="leben"] { background:var(--topf-leben); }
+.topf-punkt[data-t="spar"] { background:var(--topf-spar); }
+.topf-punkt[data-t="verm"] { background:transparent; box-shadow:inset 0 0 0 1.5px var(--fg-3); }
+
+.grosse-zahl { font-size:44px; font-weight:600; letter-spacing:-.03em; line-height:1; }
+.grosse-zahl small { font-size:.55em; font-weight:500; margin-left:3px; }
+.grosse-zahl.minus, .mini-zahl.minus { color:var(--gap-ink); }
 
 /* ============ Bereiche ============ */
 
@@ -162,60 +210,73 @@ textarea.feld { resize:vertical; line-height:1.55; }
 .entwurf-text {
   position:absolute; right:0; top:42px; width:min(340px, calc(100vw - 32px)); z-index:25;
   background:var(--surface); border-radius:var(--r-s); box-shadow:var(--shadow); padding:16px 18px; font-size:13.5px; color:var(--fg-2);
-  display:flex; flex-direction:column; gap:8px;
+  display:flex; flex-direction:column; gap:8px; align-items:flex-start;
 }
 .entwurf-text b { color:var(--fg); font-weight:600; }
 
 main { padding-block:28px 96px; }
 .seite { animation:rein .33s var(--ease) both; }
 @keyframes rein { from { opacity:.001; transform:translateY(8px); } }
-
 .zurueck { border:none; background:none; color:var(--fg-3); font-size:14px; padding:0; height:32px; display:inline-flex; align-items:center; gap:6px; }
 .zurueck:hover { color:var(--fg); }
-
-/* --- Kunden --- */
-.kunden { max-width:820px; margin:0 auto; display:flex; flex-direction:column; gap:28px; }
-.ansage { display:flex; flex-direction:column; gap:6px; }
+.schmal { max-width:820px; margin:0 auto; display:flex; flex-direction:column; gap:24px; }
+.ansage { display:flex; align-items:flex-end; justify-content:space-between; gap:12px 20px; flex-wrap:wrap; }
 .ansage h1 { font-size:30px; }
-.nachbereiten-karte { display:flex; align-items:center; gap:18px; background:var(--accent-soft); border-radius:var(--r); padding:18px 18px 18px 22px; }
+.ansage p { color:var(--fg-3); margin-top:4px; }
+.abschnitt { display:flex; flex-direction:column; gap:10px; }
+.abschnitt > h2 { font-size:15px; color:var(--fg-2); }
+.leer { color:var(--fg-3); padding:18px 22px; border:1.5px dashed var(--line-2); border-radius:var(--r); font-size:14px; }
+
+/* --- Listen (Heute, Kunden) --- */
+.liste { background:var(--surface); border-radius:var(--r); box-shadow:var(--shadow); overflow:hidden; }
+.lzeile {
+  width:100%; display:grid; grid-template-columns:minmax(0, 1fr) auto; gap:6px 18px; align-items:center; text-align:left;
+  border:none; background:none; padding:15px 22px; border-top:1px solid var(--line); transition:background .2s;
+}
+.lzeile:first-child { border-top:none; }
+button.lzeile:hover { background:var(--surface-2); }
+.lzeile .haupt { font-weight:600; font-size:16px; }
+.lzeile .neben { color:var(--fg-3); font-size:13.5px; }
+.lzeile .rechts-spalte { display:flex; flex-direction:column; gap:6px; align-items:flex-end; text-align:right; font-size:13.5px; color:var(--fg-2); }
+.lzeile .draengt { color:var(--gap-ink); }
+.lzeile.mit-haken { grid-template-columns:24px minmax(0, 1fr) auto; }
+.nachbereiten-karte { display:flex; align-items:center; gap:18px; background:var(--accent-soft); border-radius:var(--r); padding:16px 16px 16px 22px; }
 .nachbereiten-karte .was { flex:1; min-width:0; }
 .nachbereiten-karte .was b { font-weight:600; display:block; font-size:16px; }
 .nachbereiten-karte .was span { color:var(--fg-2); font-size:14px; }
-.liste { background:var(--surface); border-radius:var(--r); box-shadow:var(--shadow); overflow:hidden; }
-.kzeile {
-  width:100%; display:grid; grid-template-columns:minmax(0, 1fr) auto; gap:6px 18px; align-items:center; text-align:left;
-  border:none; background:none; padding:16px 22px; border-top:1px solid var(--line); transition:background .2s;
-}
-.kzeile:first-child { border-top:none; }
-.kzeile:hover { background:var(--surface-2); }
-.kzeile .name { font-weight:600; font-size:16px; }
-.kzeile .profil { color:var(--fg-3); font-size:13.5px; }
-.kzeile .lage { font-size:13.5px; color:var(--fg-2); text-align:right; }
-.kzeile .lage.draengt { color:var(--gap-ink); }
-.kzeile .rechts-spalte { display:flex; flex-direction:column; gap:6px; align-items:flex-end; }
-.kzeile .punktreihe { justify-content:flex-end; }
+.suche { max-width:320px; }
 
-/* --- Kundenseite --- */
-.kunde-kopf { display:flex; flex-wrap:wrap; align-items:flex-end; justify-content:space-between; gap:16px 24px; margin:10px 0 26px; }
-.kunde-kopf h1 { font-size:34px; line-height:1.15; }
-.kunde-kopf .profil { color:var(--fg-3); margin-top:4px; }
-.kunde-kopf .aktionen { display:flex; gap:10px; flex-wrap:wrap; align-items:center; }
+/* --- Kunde anlegen --- */
+.formular { display:grid; grid-template-columns:repeat(2, minmax(0, 1fr)); gap:16px; }
+.formular .ganz { grid-column:1 / -1; }
+
+/* --- Kundenakte --- */
+.akte-kopf { display:flex; flex-wrap:wrap; align-items:flex-end; justify-content:space-between; gap:16px 24px; margin:10px 0 18px; }
+.akte-kopf h1 { font-size:34px; line-height:1.15; }
+.akte-kopf .profil { color:var(--fg-3); margin-top:4px; font-size:14px; }
+.akte-kopf .aktionen { display:flex; gap:10px; flex-wrap:wrap; align-items:center; }
 .kundensicht-schalter { display:inline-flex; align-items:center; gap:10px; border:none; background:var(--surface-2); border-radius:999px; height:44px; padding:0 16px 0 8px; font-size:14px; font-weight:500; }
-.kundensicht-schalter .bahn { width:40px; height:24px; border-radius:999px; background:var(--surface-3); position:relative; transition:background .3s; }
+.kundensicht-schalter .bahn { width:40px; height:24px; border-radius:999px; background:var(--surface-3); position:relative; transition:background .3s; flex:none; }
 .kundensicht-schalter .bahn::after { content:""; position:absolute; top:3px; left:3px; width:18px; height:18px; border-radius:50%; background:var(--surface); box-shadow:0 1px 3px rgba(0,0,0,.2); transition:transform .45s var(--spring); }
 .kundensicht-schalter[aria-pressed="true"] .bahn { background:var(--accent); }
 .kundensicht-schalter[aria-pressed="true"] .bahn::after { transform:translateX(16px); }
+.reiter-leiste { overflow-x:auto; margin:0 -4px 22px; padding:0 4px; scrollbar-width:none; }
+.reiter-leiste::-webkit-scrollbar { display:none; }
+.raster { display:grid; grid-template-columns:minmax(0, 1fr) 320px; gap:24px; align-items:start; }
+.seitenspalte { display:flex; flex-direction:column; gap:16px; }
+.klick-karte { border:none; text-align:left; width:100%; display:block; transition:transform .12s var(--ease); }
+.klick-karte:active { transform:scale(.98); }
+.mini-zahl { font-size:28px; font-weight:600; letter-spacing:-.02em; line-height:1.1; margin:2px 0 10px; }
+.mini-zahl small { font-size:.6em; font-weight:500; }
 
-.kunde-raster { display:grid; grid-template-columns:minmax(0, 1fr) 320px; gap:24px; align-items:start; }
-.bilanz { display:flex; flex-wrap:wrap; gap:8px; margin-bottom:14px; }
-
+.bilanz { display:flex; flex-wrap:wrap; gap:8px; margin-bottom:14px; align-items:center; }
 .themen { display:flex; flex-direction:column; gap:10px; }
 .thema { background:var(--surface); border-radius:var(--r); box-shadow:var(--shadow); overflow:hidden; }
 .thema-kopf { width:100%; border:none; background:none; text-align:left; display:grid; grid-template-columns:minmax(0, 1fr) auto; gap:4px 16px; align-items:center; padding:16px 20px; }
 .thema-kopf .tname { font-weight:600; font-size:17px; }
 .thema-kopf .twas { color:var(--fg-2); font-size:14px; grid-column:1; }
 .thema-kopf .stand { grid-row:1 / span 2; grid-column:2; }
-.faden { display:flex; align-items:center; gap:0; padding:0 20px 16px; }
+.faden { display:flex; align-items:center; padding:0 20px 16px; }
 .faden .k { width:9px; height:9px; border-radius:50%; background:var(--line-2); flex:none; }
 .faden .k.letzter { width:11px; height:11px; }
 .faden .k.letzter[data-st="mir"] { background:var(--st-mir); }
@@ -223,44 +284,66 @@ main { padding-block:28px 96px; }
 .faden .k.letzter[data-st="erledigt"] { background:var(--st-erledigt); }
 .faden .s { height:1.5px; flex:1; max-width:56px; background:var(--line-2); }
 .faden .wann { margin-left:12px; color:var(--fg-3); font-size:12.5px; white-space:nowrap; }
-.faden-liste { list-style:none; margin:0; padding:2px 20px 18px 20px; display:flex; flex-direction:column; gap:0; }
+.thema-innen { padding:0 20px 18px; display:flex; flex-direction:column; gap:12px; }
+.faden-liste { list-style:none; margin:0; padding:0; display:flex; flex-direction:column; }
 .faden-liste li { display:grid; grid-template-columns:62px 1fr; gap:12px; padding:7px 0; border-top:1px solid var(--line); font-size:14px; }
 .faden-liste li:first-child { border-top:none; }
 .faden-liste .d { color:var(--fg-3); font-size:13px; }
-.faden-liste .intern { color:var(--fg-3); }
-.faden-liste .neu { animation:leuchten 2.4s var(--ease); border-radius:8px; }
+.neu { animation:leuchten 2.4s var(--ease); border-radius:8px; }
 @keyframes leuchten { 0%, 30% { background:var(--accent-soft); } }
+.stand-wahl { display:flex; flex-wrap:wrap; gap:6px; }
+.stand-wahl button { border:none; background:var(--surface-2); border-radius:999px; height:30px; padding:0 12px; font-size:13px; color:var(--fg-2); }
+.stand-wahl button[aria-pressed="true"] { background:var(--accent); color:var(--on-accent); }
 
-.seitenspalte { display:flex; flex-direction:column; gap:16px; }
-.seitenspalte h2 { font-size:15px; margin-bottom:10px; }
 .verlauf { list-style:none; margin:0; padding:0; display:flex; flex-direction:column; }
-.verlauf li { display:grid; grid-template-columns:14px 1fr; gap:12px; position:relative; padding-bottom:14px; }
+.verlauf li { display:grid; grid-template-columns:14px minmax(0, 1fr); gap:12px; position:relative; padding-bottom:14px; }
 .verlauf li::before { content:""; position:absolute; left:6px; top:14px; bottom:0; width:1.5px; background:var(--line); }
 .verlauf li:last-child::before { display:none; }
 .verlauf .p { width:13px; height:13px; border-radius:50%; margin-top:4px; background:var(--surface); box-shadow:inset 0 0 0 2px var(--line-2); }
 .verlauf li[data-art="termin"] .p { background:var(--accent); box-shadow:none; }
+.verlauf li[data-art="erledigt"] .p { background:var(--ok); box-shadow:none; }
 .verlauf .t { font-size:14px; }
 .verlauf .t b { font-weight:600; }
 .verlauf .t small { display:block; color:var(--fg-3); font-size:13px; }
-.verlauf li.neu .t { animation:leuchten 2.4s var(--ease); border-radius:8px; }
-.platzhalter { border:1.5px dashed var(--line-2); border-radius:var(--r); padding:16px 18px; color:var(--fg-3); font-size:13.5px; }
-.platzhalter b { color:var(--fg-2); font-weight:600; display:block; }
+.verlauf.gross .t { font-size:15px; }
 
-/* --- Nachbereiten: Fragen nacheinander --- */
+/* Finanzen */
+.fin-kopf { display:flex; flex-wrap:wrap; align-items:flex-end; justify-content:space-between; gap:12px 24px; margin-bottom:16px; }
+.fin-kopf .rein { color:var(--fg-3); font-size:14px; }
+.fin-kopf .rein b { color:var(--fg); font-size:20px; font-weight:600; display:block; }
+.fin-gruppen { display:grid; grid-template-columns:repeat(2, minmax(0, 1fr)); gap:16px; margin-top:20px; align-items:start; }
+.fin-gruppe .karte-kopf h2 { display:flex; align-items:center; gap:8px; }
+.fin-gruppe .summe { font-weight:600; font-size:15px; }
+.posten { display:grid; grid-template-columns:minmax(0, 1fr) 128px 28px; gap:8px; align-items:center; margin-bottom:8px; }
+.posten .feld { min-height:40px; padding-block:8px; }
+.posten .weg { border:none; background:none; color:var(--fg-3); width:28px; height:28px; border-radius:50%; font-size:18px; line-height:1; }
+.posten .weg:hover { background:var(--surface-2); color:var(--fg); }
+.fin-stand { color:var(--fg-3); font-size:13px; }
+
+/* Termine und Mitschrift */
+.termin-karte { width:100%; border:none; text-align:left; display:flex; flex-direction:column; gap:8px; }
+.termin-karte .zeile1 { display:flex; justify-content:space-between; gap:12px; align-items:center; }
+.termin-karte .zeile1 b { font-weight:600; font-size:16px; }
+.termin-karte .vorschau { color:var(--fg-2); font-size:14px; white-space:pre-line; display:-webkit-box; -webkit-line-clamp:3; -webkit-box-orient:vertical; overflow:hidden; }
+.mitschrift { min-height:360px; font-size:15px; }
+.speicher-hinweis { color:var(--fg-3); font-size:12.5px; }
+.offen-zeile { display:flex; justify-content:space-between; gap:10px; align-items:center; }
+
+/* Nachbereiten: Fragen nacheinander */
 .nach { max-width:760px; margin:0 auto; display:flex; flex-direction:column; gap:12px; }
 .nach .titel { margin:6px 0 14px; }
 .nach .titel h1 { font-size:30px; }
 .frage { background:var(--surface); border-radius:var(--r); box-shadow:var(--shadow); }
 .frage.zu { box-shadow:none; background:transparent; border:1px solid var(--line); }
-.frage-zeile { width:100%; border:none; background:none; display:flex; align-items:center; gap:12px; padding:13px 20px; text-align:left; font-size:14.5px; color:var(--fg-2); }
+.frage-zeile { width:100%; border:none; background:none; display:flex; align-items:center; gap:12px; padding:12px 20px; text-align:left; font-size:14.5px; color:var(--fg-2); }
 .frage-zeile .ok { width:20px; height:20px; border-radius:50%; background:var(--ok); display:grid; place-items:center; flex:none; }
 .frage-zeile .ok svg { width:11px; height:11px; stroke:#fff; stroke-width:2.8; fill:none; }
 .frage-zeile b { color:var(--fg); font-weight:600; }
 .frage-innen { padding:22px; display:flex; flex-direction:column; gap:18px; animation:auf .33s var(--ease) both; }
 @keyframes auf { from { opacity:.001; transform:translateY(-4px); } }
 .frage-innen h2 { font-size:22px; }
-.frage-innen .zitat { border-left:2px solid var(--line-2); padding-left:12px; color:var(--fg-2); font-size:14px; }
-.frage-innen .herkunft-text { color:var(--fg-3); font-size:13px; }
+.zitat { border-left:2px solid var(--line-2); padding-left:12px; color:var(--fg-2); font-size:14px; }
+.herkunft-text { color:var(--fg-3); font-size:13px; }
 .wahl { display:grid; grid-template-columns:repeat(4, minmax(0, 1fr)); gap:8px; }
 .wahl button {
   border:none; border-radius:var(--r-s); background:var(--surface-2); padding:12px 10px; text-align:left; display:flex; flex-direction:column; gap:3px;
@@ -270,56 +353,57 @@ main { padding-block:28px 96px; }
 .wahl button b { font-weight:600; font-size:14.5px; }
 .wahl button span { color:var(--fg-3); font-size:12.5px; line-height:1.35; }
 .wahl button[aria-pressed="true"] { background:var(--surface); box-shadow:0 0 0 1.5px var(--accent), 0 0 0 5px var(--accent-soft); }
-.chips { display:flex; flex-wrap:wrap; gap:8px; }
 .zeile-knoepfe { display:flex; gap:10px; align-items:center; flex-wrap:wrap; }
 .zeile-knoepfe .rechts { margin-left:auto; }
-.beschriftung { font-size:13px; color:var(--fg-3); font-weight:500; margin-bottom:6px; display:block; }
-.schritte { margin:0; padding-left:20px; color:var(--fg-2); font-size:13.5px; display:flex; flex-direction:column; gap:2px; }
-
+.schritte { margin:6px 0 0; padding-left:20px; color:var(--fg-2); font-size:13.5px; display:flex; flex-direction:column; gap:2px; }
 .ergebnis { display:grid; grid-template-columns:minmax(0, 1fr) minmax(0, 1fr); gap:16px; margin-top:12px; align-items:start; }
 .ergebnis h2 { font-size:18px; margin-bottom:4px; }
 .ergebnis .unter { color:var(--fg-3); font-size:13.5px; margin-bottom:14px; }
+.mailtext { min-height:280px; font-size:14.5px; }
+.uebernehmen-leiste { position:sticky; bottom:calc(16px + env(safe-area-inset-bottom, 0px)); display:flex; justify-content:flex-end; margin-top:8px; }
+
+/* Aufgaben (wie in Klar) */
 .punkte { list-style:none; margin:0; padding:0; display:flex; flex-direction:column; }
 .punkte > li { display:grid; grid-template-columns:24px minmax(0, 1fr); gap:12px; padding:9px 0; border-top:1px solid var(--line); }
 .punkte > li:first-child { border-top:none; }
 .punkte .pt { font-size:14.5px; }
 .punkte .pn { color:var(--fg-3); font-size:13px; }
+.punkte .ablauf { display:block; color:var(--fg-3); font-size:13px; margin-top:2px; }
+.punkte .faellig { color:var(--gap-ink); }
 .punkte .tag { display:inline-block; margin-left:6px; font-size:11.5px; color:var(--fg-3); background:var(--surface-2); border-radius:999px; padding:1px 8px; vertical-align:1px; }
-.punkte > li[data-aus="ja"] .pt { color:var(--fg-3); text-decoration:line-through; }
-.mailtext { min-height:340px; font-size:14.5px; }
-.uebernehmen-leiste { position:sticky; bottom:calc(16px + env(safe-area-inset-bottom, 0px)); display:flex; justify-content:flex-end; margin-top:8px; }
-
-/* --- Aufgaben --- */
-.aufgaben { max-width:820px; margin:0 auto; display:flex; flex-direction:column; gap:18px; }
+.punkte > li[data-aus="ja"] .pt, .punkte > li[data-fertig="ja"] .pt { color:var(--fg-3); text-decoration:line-through; }
+.klar-zeile { display:flex; align-items:center; gap:8px; color:var(--fg-3); font-size:13px; white-space:nowrap; }
+.klar-zeile .punkt { width:8px; height:8px; border-radius:50%; background:var(--ok); }
 .aufgabe { background:var(--surface); border-radius:var(--r); box-shadow:var(--shadow); padding:18px 22px; }
 .aufgabe-kopf { display:flex; justify-content:space-between; gap:12px; align-items:baseline; margin-bottom:6px; }
-.aufgabe-kopf button { border:none; background:none; padding:0; font-weight:600; font-size:16px; text-align:left; }
+.aufgabe-kopf button, .aufgabe-kopf b { border:none; background:none; padding:0; font-weight:600; font-size:16px; text-align:left; }
 .aufgabe-kopf button:hover { color:var(--accent-ink); }
 .aufgabe .notiz { color:var(--fg-3); font-size:13.5px; margin-bottom:8px; }
-.punkte .faellig { color:var(--gap-ink); }
-.punkte .ablauf { display:block; color:var(--fg-3); font-size:13px; margin-top:2px; }
-.leer { color:var(--fg-3); text-align:center; padding:40px 0; }
+.neuer-punkt { display:flex; gap:8px; margin-top:12px; }
 
 /* ============ Handy ============ */
 @media (max-width: 860px) {
-  .kunde-raster { grid-template-columns:minmax(0, 1fr); }
-  .ergebnis { grid-template-columns:minmax(0, 1fr); }
+  .raster, .ergebnis, .fin-gruppen { grid-template-columns:minmax(0, 1fr); }
+  .raster > .seitenspalte { order:-1; }
 }
 @media (max-width: 600px) {
   .wrap { padding-left:max(16px, env(safe-area-inset-left, 0px)); padding-right:max(16px, env(safe-area-inset-right, 0px)); }
   .kopf .wrap { grid-template-columns:auto 1fr; }
   .kopf .links { display:none; }
+  .umschalter button { padding:0 12px; }
   .karte, .frage-innen { padding:18px; }
-  .kzeile { grid-template-columns:minmax(0, 1fr); padding:14px 18px; }
-  .kzeile .lage { text-align:left; }
-  .kzeile .rechts-spalte { align-items:flex-start; }
-  .kzeile .punktreihe { justify-content:flex-start; }
-  .kunde-kopf h1, .ansage h1, .nach .titel h1 { font-size:26px; }
+  .lzeile { grid-template-columns:minmax(0, 1fr); padding:14px 18px; }
+  .lzeile.mit-haken { grid-template-columns:24px minmax(0, 1fr); }
+  .lzeile .rechts-spalte { align-items:flex-start; text-align:left; }
+  .lzeile.mit-haken .rechts-spalte { grid-column:2; }
+  .akte-kopf h1, .ansage h1, .nach .titel h1 { font-size:26px; }
   .wahl { grid-template-columns:repeat(2, minmax(0, 1fr)); }
   .nachbereiten-karte { flex-direction:column; align-items:stretch; }
-  .knopf.breit-mobil { width:100%; }
-  .uebernehmen-leiste .knopf { width:100%; }
-  .kundensicht-schalter { width:100%; }
+  .breit-mobil, .uebernehmen-leiste .knopf, .kundensicht-schalter { width:100%; }
+  .akte-kopf .aktionen { width:100%; }
+  .formular { grid-template-columns:minmax(0, 1fr); }
+  .posten { grid-template-columns:minmax(0, 1fr) 104px 28px; }
+  .grosse-zahl { font-size:38px; }
   .aufgabe { padding:16px 18px; }
 }
 </style>
@@ -328,17 +412,18 @@ main { padding-block:28px 96px; }
 <header class="kopf">
   <div class="wrap">
     <div class="links"></div>
-    <div class="umschalter" id="hauptwahl" role="group" aria-label="Ansicht">
+    <div class="umschalter" id="hauptwahl" role="group" aria-label="Bereich">
       <span class="gleiter" aria-hidden="true"></span>
-      <button type="button" data-geh="kunden" id="wahl-kunden">Kunden</button>
-      <button type="button" data-geh="aufgaben" id="wahl-aufgaben">Aufgaben <span class="zahl-klein" id="zahl-aufgaben"></span></button>
+      <button type="button" data-geh="heute">Heute</button>
+      <button type="button" data-geh="kunden">Kunden</button>
+      <button type="button" data-geh="aufgaben">Aufgaben <span class="zahl-klein" id="zahl-aufgaben"></span></button>
     </div>
     <div class="rechts">
       <button type="button" class="entwurf-knopf" id="entwurf-knopf" aria-expanded="false">Entwurf</button>
       <div class="entwurf-text" id="entwurf-text" hidden>
-        <p><b>Klickbarer Entwurf mit erfundenen Kunden.</b> Nichts wird gespeichert, neu laden setzt zurück.</p>
-        <p><b>Gespielt:</b> Die Übergabe an Klar landet hier unter „Aufgaben“. Die Abläufe kommen später aus deinem Wiki, hier sind es Beispiele. Was Claude aus der Mitschrift ergänzt, ist fest vorgegeben.</p>
-        <p><b>Fehlt noch:</b> Konto und Datenbank, Finanzen beim Kunden, Professional Works.</p>
+        <p><b>Klickbarer Entwurf mit erfundenen Kunden.</b> Bitte nur Testdaten eintragen. Was du änderst, bleibt in diesem Tab, bis du ihn schließt.</p>
+        <p><b>Gespielt:</b> Klar. Was „in Klar“ steht, liegt hier in der Zentrale; die echte Verbindung kommt mit dem Konto. Die Abläufe sind Beispiele, später aus deinem Wiki. Claudes Ergänzung aus der Mitschrift ist fest vorgegeben.</p>
+        <button type="button" class="knopf still klein" id="zuruecksetzen">Beispiel neu laden</button>
       </div>
     </div>
   </div>
@@ -347,7 +432,7 @@ main { padding-block:28px 96px; }
 <div class="toast" id="toast" role="status" aria-live="polite"></div>
 
 <script id="kern">
-/* Kern: Daten, Themen erkennen, Aufgabe und Mail bauen, Abhaken. Ohne Oberfläche. */
+/* Kern: Daten, Finanzen rechnen, Themen erkennen, Aufgabe und Mail bauen, Übernehmen, Abhaken. Ohne Oberfläche. */
 var HEUTE = "2026-10-17";
 
 var STAND = {
@@ -357,13 +442,25 @@ var STAND = {
   erledigt:  { wort: "Erledigt",     kurz: "erledigt" }
 };
 var STAND_REIHE = ["mir", "kunde", "naechstes", "erledigt"];
+var TERMINARTEN = ["Erstgespräch", "Update-Termin", "Sonstiges"];
+var TAETIGKEITEN = ["Angestellt", "Selbstständig", "Beamtet", "In Ausbildung", "Im Ruhestand"];
+
+/* Finanzen: Einnahmen minus vier Töpfe = frei im Monat. Vermögen getrennt. */
+var GRUPPEN = [
+  { id: "ein",   name: "Einnahmen",           vorschlaege: ["Gehalt", "Gewinn", "Kindergeld", "Nebenjob", "Miete erhalten"] },
+  { id: "fix",   name: "Wohnen und Verträge", vorschlaege: ["Miete", "Nebenkosten", "Strom", "Internet", "Handy", "Rundfunkbeitrag", "Kita", "Kreditrate"] },
+  { id: "vers",  name: "Versicherungen",      vorschlaege: ["Krankenversicherung", "Haftpflicht", "Hausrat", "Kfz", "BU", "Rechtsschutz"] },
+  { id: "leben", name: "Leben",               vorschlaege: ["Lebensmittel", "Tanken", "Freizeit", "Kleidung", "Abos", "Urlaub"] },
+  { id: "spar",  name: "Sparen und Vorsorge", vorschlaege: ["ETF-Sparplan", "Altersvorsorge", "VL", "Sparrate Tagesgeld"] },
+  { id: "verm",  name: "Vermögen",            vorschlaege: ["Tagesgeld", "Girokonto", "Depot", "Bausparvertrag"] }
+];
+var TOEPFE = ["fix", "vers", "leben", "spar"];
 
 /* Beispiel-Abläufe. Später liest die Zentrale sie aus dem Wiki (wiki/aktuell). */
 var WIKI = {
   finanzen: {
-    name: "Finanzen", muster: /finanzdaten|finanzakte|einnahmen|ausgaben/i, ablauf: "Finanzübersicht ablegen",
-    was: "Finanzakte ablegen", schritte: ["Finanzakte im Kundenordner speichern"], fertigImTermin: true,
-    erledigtText: "Einnahmen und Ausgaben aufgenommen"
+    name: "Finanzen", muster: /finanzdaten|finanzakte|einnahmen|ausgaben/i, ablauf: "Finanzübersicht",
+    was: "Finanzen aufnehmen", fertigImTermin: true, erledigtText: "Einnahmen und Ausgaben aufgenommen"
   },
   haftpflicht: {
     name: "Haftpflicht", muster: /haftpflicht|\bphv\b/i, ablauf: "Angebot Sachversicherung",
@@ -405,9 +502,8 @@ var WIKI = {
 };
 
 var BEISPIEL_MITSCHRIFT = [
-  "Erstgespräch 17.10.",
   "- selbstständig seit 2023 (Grafikdesign), Gewinn schwankt stark",
-  "- Finanzdaten aufgenommen, Finanzakte angelegt",
+  "- Finanzdaten aufgenommen",
   "- Haftpflicht fehlt komplett -> rechnen",
   "- Hausrat von 2015, mal vergleichen",
   "- BU hat sie keine, will erst Gesundheitsfragen klären",
@@ -420,83 +516,182 @@ function neueId(p) { _id += 1; return (p || "x") + _id; }
 
 function tageZwischen(a, b) { return Math.round((Date.parse(b) - Date.parse(a)) / 864e5); }
 function plusTage(iso, n) { var d = new Date(Date.parse(iso) + n * 864e5); return d.toISOString().slice(0, 10); }
-function datum(iso) { var p = iso.split("-"); return p[2] + "." + p[1] + "." + p[0]; }
-function datumKurz(iso) { var p = iso.split("-"); return p[2] + "." + p[1] + "."; }
+function datum(iso) { var p = String(iso).split("-"); return p[2] + "." + p[1] + "." + p[0]; }
+function datumKurz(iso) { var p = String(iso).split("-"); return p[2] + "." + p[1] + "."; }
+
+/* „1.250“, „18,36“, „1.250,50 €“ → Zahl; Unsinn → 0 */
+function leseBetrag(s) {
+  var t = String(s == null ? "" : s).replace(/[€\s]/g, "");
+  if (!t) { return 0; }
+  if (t.indexOf(",") >= 0) { t = t.replace(/\./g, "").replace(",", "."); }
+  else if (/^\d{1,3}(\.\d{3})+$/.test(t)) { t = t.replace(/\./g, ""); }
+  var n = Number(t);
+  return isFinite(n) && n > 0 && n < 1e8 ? Math.round(n * 100) / 100 : 0;
+}
+function zahlText(n) { return n.toLocaleString("de-DE", { minimumFractionDigits: n % 1 ? 2 : 0, maximumFractionDigits: 2 }); }
+function euro(n) { var r = Math.round(n * 100) / 100; return (r < 0 ? "−" : "") + zahlText(Math.abs(r)) + " €"; }
+function betragText(n) { return n ? zahlText(n) : ""; }
+
+function finanzSummen(f) {
+  var s = { ein: 0, fix: 0, vers: 0, leben: 0, spar: 0, verm: 0 };
+  if (f) { f.posten.forEach(function (p) { s[p.gruppe] += p.betrag || 0; }); }
+  s.aus = s.fix + s.vers + s.leben + s.spar;
+  s.frei = Math.round((s.ein - s.aus) * 100) / 100;
+  return s;
+}
+
+function anrede(k, i) { return k.paar ? i[1] : i[0]; }
+function offeneTermine(k) { return k.termine.filter(function (t) { return t.status === "offen" && t.d <= HEUTE; }); }
+function naechsterTermin(k) { return k.termine.filter(function (t) { return t.d > HEUTE; }).sort(function (a, b) { return a.d < b.d ? -1 : 1; })[0] || null; }
+
+function neuerKunde(S, d) {
+  var vor = String(d.vorname || "").trim(), nach = String(d.nachname || "").trim(), partner = String(d.partner || "").trim();
+  if (!vor || !nach) { return null; }
+  var jahr = parseInt(d.geburtsjahr, 10);
+  var k = {
+    id: neueId("k"), vorname: partner ? vor + " und " + partner : vor, paar: !!partner,
+    name: (partner ? vor + " und " + partner : vor) + " " + nach,
+    taetigkeit: d.taetigkeit || "", geburtsjahr: jahr > 1900 && jahr < 2030 ? jahr : null,
+    mail: String(d.mail || "").trim(), tel: String(d.tel || "").trim(),
+    themen: [], termine: [], finanzen: null,
+    verlauf: [{ id: neueId("v"), d: HEUTE, art: "notiz", text: "Kunde angelegt", intern: true }]
+  };
+  S.kunden.push(k);
+  return k;
+}
+
+function profilText(k) {
+  var teile = [];
+  if (k.taetigkeit) { teile.push(k.taetigkeit); }
+  if (k.geburtsjahr) { teile.push((parseInt(HEUTE, 10) - k.geburtsjahr) + " Jahre"); }
+  if (k.zusatz) { teile.push(k.zusatz); }
+  return teile.join(", ");
+}
+
+function neuerTermin(k, art, d) {
+  var t = { id: neueId("m"), art: art, d: d, mitschrift: "", status: d > HEUTE ? "geplant" : "offen", ergebnis: null };
+  k.termine.push(t);
+  k.verlauf.push({ id: neueId("v"), d: HEUTE, art: "notiz", text: art + " am " + datum(d) + " eingetragen", intern: true });
+  return t;
+}
 
 /* Erfundene Kunden für den Entwurf */
 function beispielStand() {
   _id = 0;
-  function th(wikiId, stand, was, faden, name) {
-    return { id: neueId("t"), wiki: wikiId, name: name || WIKI[wikiId].name, stand: stand, was: was,
-      faden: faden.map(function (f) { return { id: neueId("f"), d: f[0], text: f[1], intern: !!f[2] }; }) };
+  function th(wikiId, stand, was, faden) {
+    return { id: neueId("t"), wiki: wikiId, name: WIKI[wikiId].name, stand: stand, was: was,
+      faden: faden.map(function (f) { return { id: neueId("f"), d: f[0], text: f[1] }; }) };
+  }
+  function fin(stand, liste) {
+    return { stand: stand, posten: liste.map(function (p) { return { id: neueId("g"), gruppe: p[0], name: p[1], betrag: p[2] }; }) };
+  }
+  function tm(art, d, status, mitschrift, ergebnis) {
+    return { id: neueId("m"), art: art, d: d, status: status, mitschrift: mitschrift || "",
+      ergebnis: ergebnis ? ergebnis.map(function (e) { return { name: e[0], stand: e[1] }; }) : null };
   }
   var kunden = [
     {
-      id: "lea", name: "Lea Muster", vorname: "Lea", paar: false, profil: "Selbstständig, 31",
-      offenerTermin: { art: "Erstgespräch", d: HEUTE }, naechsterTermin: null,
+      id: "lea", name: "Lea Muster", vorname: "Lea", paar: false, taetigkeit: "Selbstständig", geburtsjahr: 1995,
+      mail: "lea@example.org", tel: "0170 0000001",
       themen: [],
-      verlauf: [{ id: neueId("v"), d: "2026-10-01", art: "notiz", text: "Erstgespräch vereinbart", intern: false }]
+      termine: [tm("Erstgespräch", HEUTE, "offen", "")],
+      finanzen: fin(HEUTE, [
+        ["ein", "Gewinn (Entnahme)", 3200],
+        ["fix", "Miete warm", 980], ["fix", "Strom", 65], ["fix", "Internet und Handy", 55], ["fix", "Rundfunkbeitrag", 18.36],
+        ["vers", "Krankenversicherung", 520], ["vers", "Hausrat", 9],
+        ["leben", "Lebensmittel", 380], ["leben", "Freizeit", 200], ["leben", "Tanken", 90],
+        ["spar", "ETF-Sparplan", 150],
+        ["verm", "Tagesgeld", 6000], ["verm", "Depot", 4500]
+      ]),
+      verlauf: [{ id: neueId("v"), d: "2026-10-01", art: "notiz", text: "Erstgespräch vereinbart" }]
     },
     {
-      id: "beispiel", name: "Jonas und Mira Beispiel", vorname: "Jonas und Mira", paar: true, profil: "Paar mit Kind, angestellt",
-      offenerTermin: null, naechsterTermin: null,
+      id: "beispiel", name: "Jonas und Mira Beispiel", vorname: "Jonas und Mira", paar: true, taetigkeit: "Angestellt", geburtsjahr: 1990, zusatz: "ein Kind",
+      mail: "familie@example.org", tel: "0170 0000002",
       themen: [
-        th("finanzen", "erledigt", "Einnahmen und Ausgaben aufgenommen", [["2026-08-12", "Im Erstgespräch aufgenommen"]]),
+        th("finanzen", "erledigt", "Einnahmen und Ausgaben aufgenommen", [["2026-08-12", "Im Erstgespräch aufgenommen"], ["2026-10-02", "Im Update aktualisiert"]]),
         th("haftpflicht", "erledigt", "Abgeschlossen", [["2026-08-12", "Fehlt, Angebot zugesagt"], ["2026-08-14", "Angebot gerechnet und geschickt"], ["2026-08-29", "Abgeschlossen"]]),
         th("altersvorsorge", "kunde", "Vorschlag geschickt", [["2026-08-12", "Für den nächsten Termin gewünscht"], ["2026-10-02", "Im Update besprochen, Rentenlücke gezeigt"], ["2026-10-06", "Vorschlag geschickt"]]),
         th("bu", "kunde", "Gesundheitsfragen klären", [["2026-10-02", "Mira hat keine, Gesundheitsfragen offen"]]),
         th("kfz", "naechstes", "Vertrag läuft zum 01.01. aus", [["2026-10-02", "Für den nächsten Termin vorgemerkt"]])
       ],
+      termine: [
+        tm("Erstgespräch", "2026-08-12", "nachbereitet", "- Finanzdaten aufgenommen\n- Haftpflicht fehlt, Angebot rechnen\n- Altersvorsorge nächstes Mal, beide interessiert", [["Finanzen", "erledigt"], ["Haftpflicht", "mir"], ["Altersvorsorge", "naechstes"]]),
+        tm("Update-Termin", "2026-10-02", "nachbereitet", "- Altersvorsorge: Rentenlücke gezeigt, Vorschlag ausarbeiten\n- BU für Mira, erst Gesundheitsfragen klären\n- Kfz läuft zum 01.01. aus, nächstes Mal\n- Finanzen aktualisiert (Kita teurer)", [["Altersvorsorge", "mir"], ["BU", "kunde"], ["Kfz", "naechstes"]])
+      ],
+      finanzen: fin("2026-10-02", [
+        ["ein", "Gehalt Jonas", 2900], ["ein", "Gehalt Mira", 1650], ["ein", "Kindergeld", 259],
+        ["fix", "Miete warm", 1250], ["fix", "Strom", 90], ["fix", "Kita", 180], ["fix", "Internet und Handy", 75], ["fix", "Autokredit", 280],
+        ["vers", "Haftpflicht", 7], ["vers", "Kfz", 62], ["vers", "Hausrat", 11],
+        ["leben", "Lebensmittel", 650], ["leben", "Tanken", 140], ["leben", "Freizeit", 250],
+        ["spar", "ETF-Sparplan", 200], ["spar", "VL", 40],
+        ["verm", "Tagesgeld", 9500]
+      ]),
       verlauf: [
         { id: neueId("v"), d: "2026-08-12", art: "termin", text: "Erstgespräch", themen: "Finanzen, Haftpflicht, Altersvorsorge" },
         { id: neueId("v"), d: "2026-08-15", art: "notiz", text: "Mail mit den nächsten Schritten verschickt" },
+        { id: neueId("v"), d: "2026-08-29", art: "erledigt", text: "Haftpflicht abgeschlossen" },
         { id: neueId("v"), d: "2026-10-02", art: "termin", text: "Update-Termin", themen: "Altersvorsorge, BU, Kfz" },
+        { id: neueId("v"), d: "2026-10-02", art: "finanzen", text: "Finanzen aktualisiert, frei 1.574 €" },
         { id: neueId("v"), d: "2026-10-06", art: "notiz", text: "Mail mit den nächsten Schritten verschickt" }
       ]
     },
     {
-      id: "probe", name: "Tom Probe", vorname: "Tom", paar: false, profil: "Angestellt, 44",
-      offenerTermin: null, naechsterTermin: null,
+      id: "probe", name: "Tom Probe", vorname: "Tom", paar: false, taetigkeit: "Angestellt", geburtsjahr: 1982,
+      mail: "tom@example.org", tel: "0170 0000003",
       themen: [
         th("hausrat", "mir", "Vertrag vergleichen", [["2026-09-25", "Vertrag von 2012, Vergleich zugesagt"]]),
         th("kfz", "kunde", "Fahrzeugschein schicken", [["2026-09-25", "Neues Auto ab November"]]),
         th("haftpflicht", "erledigt", "Kein Bedarf, über den Arbeitgeber versichert", [["2026-09-25", "Kein Bedarf"]])
       ],
+      termine: [tm("Update-Termin", "2026-09-25", "nachbereitet", "- Hausrat von 2012, vergleichen\n- neues Auto ab November, schickt Fahrzeugschein\n- Haftpflicht über den Arbeitgeber", [["Hausrat", "mir"], ["Kfz", "kunde"], ["Haftpflicht", "erledigt"]])],
+      finanzen: null,
       verlauf: [{ id: neueId("v"), d: "2026-09-25", art: "termin", text: "Update-Termin", themen: "Hausrat, Kfz, Haftpflicht" }]
     },
     {
-      id: "test", name: "Sven Testmann", vorname: "Sven", paar: false, profil: "Beamter, 38",
-      offenerTermin: null, naechsterTermin: "2026-11-05",
+      id: "test", name: "Sven Testmann", vorname: "Sven", paar: false, taetigkeit: "Beamtet", geburtsjahr: 1988,
+      mail: "sven@example.org", tel: "0170 0000004",
       themen: [
         th("finanzen", "erledigt", "Einnahmen und Ausgaben aufgenommen", [["2026-09-03", "Im Erstgespräch aufgenommen"]]),
         th("bu", "erledigt", "Dienstunfähigkeit abgeschlossen", [["2026-09-03", "Voranfrage zugesagt"], ["2026-09-10", "Angebot geschickt"], ["2026-09-24", "Abgeschlossen"]]),
         th("altersvorsorge", "naechstes", "Termin am 05.11.", [["2026-09-03", "Für den nächsten Termin gewünscht"], ["2026-10-08", "Termin vereinbart"]])
       ],
+      termine: [
+        tm("Erstgespräch", "2026-09-03", "nachbereitet", "- Finanzdaten aufgenommen\n- Dienstunfähigkeit fehlt, Voranfrage\n- Altersvorsorge nächstes Mal", [["Finanzen", "erledigt"], ["BU", "mir"], ["Altersvorsorge", "naechstes"]]),
+        tm("Update-Termin", "2026-11-05", "geplant", "")
+      ],
+      finanzen: fin("2026-09-03", [
+        ["ein", "Besoldung", 3400],
+        ["fix", "Miete warm", 890], ["fix", "Strom", 55], ["fix", "Internet und Handy", 50],
+        ["vers", "Private Krankenversicherung", 260], ["vers", "Dienstunfähigkeit", 48],
+        ["leben", "Lebensmittel", 350], ["leben", "Freizeit", 300],
+        ["spar", "ETF-Sparplan", 400],
+        ["verm", "Tagesgeld", 12000], ["verm", "Depot", 18000]
+      ]),
       verlauf: [
         { id: neueId("v"), d: "2026-09-03", art: "termin", text: "Erstgespräch", themen: "Finanzen, BU, Altersvorsorge" },
-        { id: neueId("v"), d: "2026-10-08", art: "notiz", text: "Termin für den 05.11. vereinbart" }
+        { id: neueId("v"), d: "2026-09-24", art: "erledigt", text: "Dienstunfähigkeit abgeschlossen" },
+        { id: neueId("v"), d: "2026-10-08", art: "notiz", text: "Update-Termin am 05.11. vereinbart" }
       ]
     }
   ];
-  function th2(k, wikiName) { return k.themen.filter(function (t) { return t.name === wikiName; })[0].id; }
+  function thId(k, n) { return k.themen.filter(function (t) { return t.name === n; })[0].id; }
   var b = kunden[1], p = kunden[2];
   var aufgaben = [
     { id: neueId("a"), kunde: "beispiel", titel: "@Jonas und Mira Beispiel", notiz: "Update-Termin 02.10.2026: Altersvorsorge, BU, Kfz.", punkte: [
-      { id: neueId("p"), t: "Altersvorsorge: Vorschlag vorbereiten", thema: th2(b, "Altersvorsorge"), art: "mir", fertig: true, schritte: WIKI.altersvorsorge.schritte, quelle: WIKI.altersvorsorge.ablauf },
+      { id: neueId("p"), t: "Altersvorsorge: Vorschlag vorbereiten", thema: thId(b, "Altersvorsorge"), art: "mir", fertig: true, schritte: WIKI.altersvorsorge.schritte, quelle: WIKI.altersvorsorge.ablauf },
       { id: neueId("p"), t: "Mail gegenlesen lassen", thema: null, art: "mir", fertig: true, intern: true },
       { id: neueId("p"), t: "Mail verschicken", thema: null, art: "mir", fertig: true, verlaufText: "Mail mit den nächsten Schritten verschickt" },
-      { id: neueId("p"), t: "Wartet auf Jonas und Mira: Gesundheitsfragen klären", thema: th2(b, "BU"), art: "kunde", fertig: false, seit: "2026-10-02", wieder: "2026-10-09" },
-      { id: neueId("p"), t: "Termin vereinbaren", thema: null, art: "mir", fertig: false, notiz: "Für Kfz, bis Ende November", verlaufText: "Termin vereinbart" }
+      { id: neueId("p"), t: "Wartet auf Jonas und Mira: Gesundheitsfragen klären", thema: thId(b, "BU"), art: "kunde", fertig: false, seit: "2026-10-02", wieder: "2026-10-09" },
+      { id: neueId("p"), t: "Termin vereinbaren", thema: null, art: "mir", fertig: false, notiz: "Für Kfz, bis Ende November", verlaufText: "Nächsten Termin vereinbart" }
     ] },
     { id: neueId("a"), kunde: "probe", titel: "@Tom Probe", notiz: "Update-Termin 25.09.2026: Hausrat, Kfz, Haftpflicht.", punkte: [
-      { id: neueId("p"), t: "Hausrat: Vertrag vergleichen", thema: th2(p, "Hausrat"), art: "mir", fertig: false, schritte: WIKI.hausrat.schritte, quelle: WIKI.hausrat.ablauf },
-      { id: neueId("p"), t: "Wartet auf Tom: Fahrzeugschein schicken", thema: th2(p, "Kfz"), art: "kunde", fertig: false, seit: "2026-09-25", wieder: "2026-10-02" }
+      { id: neueId("p"), t: "Hausrat: Vertrag vergleichen", thema: thId(p, "Hausrat"), art: "mir", fertig: false, schritte: WIKI.hausrat.schritte, quelle: WIKI.hausrat.ablauf },
+      { id: neueId("p"), t: "Wartet auf Tom: Fahrzeugschein schicken", thema: thId(p, "Kfz"), art: "kunde", fertig: false, seit: "2026-09-25", wieder: "2026-10-02" }
     ] }
   ];
   return { kunden: kunden, aufgaben: aufgaben };
 }
-
-function anrede(k, i) { return k.paar ? i[1] : i[0]; }
 
 /* Themen aus der Mitschrift: Abläufe aus dem Wiki per Stichwort, der Rest später per Claude.
    Im Entwurf erkennt eine einfache Regel „schickt … nach“ als Aufgabe für den Kunden. */
@@ -547,8 +742,6 @@ function baueAufgabe(k, termin, themen) {
       punkte.push({ key: "mir-" + t.key, t: t.name + ": " + t.was, thema: t.key, art: "mir", schritte: w ? w.schritte : null, quelle: w ? w.ablauf : null });
     } else if (t.stand === "kunde") {
       punkte.push({ key: "kunde-" + t.key, t: "Wartet auf " + k.vorname + ": " + t.was, thema: t.key, art: "kunde", notiz: "Wiedervorlage " + datum(plusTage(termin.d, 7)) });
-    } else if (t.stand === "erledigt" && w && w.fertigImTermin && w.schritte) {
-      punkte.push({ key: "ablage-" + t.key, t: w.schritte[0], thema: null, art: "mir", intern: true });
     }
   });
   var naechstes = themen.filter(function (t) { return t.stand === "naechstes"; });
@@ -562,7 +755,7 @@ function baueAufgabe(k, termin, themen) {
     punkte.push({ key: "termin", t: "Termin vereinbaren", thema: null, art: "mir", verlaufText: "Nächsten Termin vereinbart" });
     punkte.push({ key: "vorbereiten", t: "Termin vorbereiten", thema: null, art: "mir", intern: true,
       notiz: "Vorbereiten: " + naechstes.map(function (t) { return t.name; }).join(", "), schritte: vor.length ? vor : null,
-      quelle: naechstes.length === 1 && naechstes[0].wiki && WIKI[naechstes[0].wiki].vorbereiten ? WIKI[naechstes[0].wiki].ablauf : null });
+      quelle: vor.length ? "Wiki" : null });
   }
   return {
     titel: "@" + k.name,
@@ -597,13 +790,14 @@ function baueMail(k, termin, themen) {
   return z.join("\n");
 }
 
-/* Nachbereitung übernehmen: Themen beim Kunden fortschreiben, Aufgabe in Klar, Verlauf. */
-function uebernehmen(S, kundeId, termin, themen, aufgabe) {
+/* Nachbereitung übernehmen: Themen fortschreiben, Termin abschließen, Aufgabe in Klar, Verlauf. */
+function uebernehmen(S, kundeId, terminId, themen, aufgabe) {
   var k = S.kunden.filter(function (x) { return x.id === kundeId; })[0];
+  var termin = k.termine.filter(function (t) { return t.id === terminId; })[0];
   var neu = { themen: [], verlauf: [] };
   var themaId = {};
   themen.forEach(function (t) {
-    var vorhanden = k.themen.filter(function (x) { return (t.bestand && x.id === t.bestand) || (!t.bestand && t.wiki && x.wiki === t.wiki); })[0];
+    var vorhanden = k.themen.filter(function (x) { return (t.bestand && x.id === t.bestand) || (!t.bestand && t.wiki && x.wiki === t.wiki) || (!t.bestand && !t.wiki && x.name === t.name); })[0];
     var text = termin.art + ": " + (t.stand === "erledigt" ? t.was : STAND[t.stand].kurz + ", " + t.was);
     var f = { id: neueId("f"), d: termin.d, text: text };
     if (vorhanden) {
@@ -615,6 +809,8 @@ function uebernehmen(S, kundeId, termin, themen, aufgabe) {
     }
     neu.themen.push(f.id);
   });
+  termin.status = "nachbereitet";
+  termin.ergebnis = themen.map(function (t) { return { name: t.name, stand: t.stand }; });
   var v = { id: neueId("v"), d: termin.d, art: "termin", text: termin.art, themen: themen.map(function (t) { return t.name; }).join(", ") };
   k.verlauf.push(v); neu.verlauf.push(v.id);
   var punkte = aufgabe.punkte.filter(function (p) { return p.an !== false; }).map(function (p) {
@@ -625,12 +821,33 @@ function uebernehmen(S, kundeId, termin, themen, aufgabe) {
   var alt = S.aufgaben.filter(function (a) { return a.kunde === kundeId; })[0];
   if (alt) { alt.notiz = aufgabe.notiz; alt.punkte = alt.punkte.concat(punkte); }
   else if (punkte.length) { S.aufgaben.push({ id: neueId("a"), kunde: kundeId, titel: aufgabe.titel, notiz: aufgabe.notiz, punkte: punkte }); }
-  k.offenerTermin = null;
   if (punkte.length) {
     var kv = { id: neueId("v"), d: termin.d, art: "notiz", text: "In Klar übernommen: " + punkte.length + " Punkte", intern: true };
     k.verlauf.push(kv); neu.verlauf.push(kv.id);
   }
   return { neu: neu, punkte: punkte.length };
+}
+
+/* Eigener Punkt für einen Kunden, außerhalb eines Termins (landet in derselben Klar-Aufgabe). */
+function neuerPunkt(S, kundeId, text) {
+  var t = String(text || "").trim(); if (!t) { return null; }
+  var k = S.kunden.filter(function (x) { return x.id === kundeId; })[0];
+  var a = S.aufgaben.filter(function (x) { return x.kunde === kundeId; })[0];
+  if (!a) { a = { id: neueId("a"), kunde: kundeId, titel: "@" + k.name, notiz: "", punkte: [] }; S.aufgaben.push(a); }
+  var p = { id: neueId("p"), t: t, thema: null, art: "mir", fertig: false, verlaufText: t + ": erledigt" };
+  a.punkte.push(p);
+  return p;
+}
+
+/* Stand eines Themas von Hand ändern (z. B. im Update-Termin). Schreibt den Faden fort. */
+function setzeThemaStand(k, themaId, stand, heute) {
+  var th = k.themen.filter(function (t) { return t.id === themaId; })[0];
+  if (!th || th.stand === stand) { return null; }
+  th.stand = stand;
+  th.was = stand === "erledigt" ? "Erledigt" : stand === "naechstes" ? "Im nächsten Termin besprechen" : th.was;
+  var f = { id: neueId("f"), d: heute, text: STAND[stand].wort };
+  th.faden.push(f);
+  return f;
 }
 
 /* Abhaken (in Klar oder hier – derselbe Punkt). Schreibt den Faden des Themas fort. */
@@ -660,8 +877,8 @@ function abhaken(S, aufgabeId, punktId, an, heute) {
         th.faden.push(f); p.spur.push({ wo: "faden", id: f.id });
       }
     }
-    if (p.verlaufText) {
-      var v = { id: neueId("v"), d: heute, art: "notiz", text: p.verlaufText };
+    if (p.verlaufText || th) {
+      var v = { id: neueId("v"), d: heute, art: "erledigt", text: p.verlaufText || p.t.replace(/^Wartet auf [^:]+:\s*/, "") + ": erledigt" };
       k.verlauf.push(v); p.spur.push({ wo: "verlauf", id: v.id });
     }
   } else {
@@ -676,38 +893,70 @@ function abhaken(S, aufgabeId, punktId, an, heute) {
 }
 
 if (typeof module !== "undefined") {
-  module.exports = { HEUTE: HEUTE, WIKI: WIKI, STAND: STAND, BEISPIEL_MITSCHRIFT: BEISPIEL_MITSCHRIFT, beispielStand: beispielStand,
-    erkenneThemen: erkenneThemen, vorschlagWas: vorschlagWas, baueAufgabe: baueAufgabe, baueMail: baueMail, uebernehmen: uebernehmen, abhaken: abhaken };
+  module.exports = { HEUTE: HEUTE, WIKI: WIKI, STAND: STAND, GRUPPEN: GRUPPEN, BEISPIEL_MITSCHRIFT: BEISPIEL_MITSCHRIFT, beispielStand: beispielStand,
+    leseBetrag: leseBetrag, euro: euro, finanzSummen: finanzSummen, neuerKunde: neuerKunde, neuerTermin: neuerTermin, offeneTermine: offeneTermine,
+    erkenneThemen: erkenneThemen, vorschlagWas: vorschlagWas, baueAufgabe: baueAufgabe, baueMail: baueMail, uebernehmen: uebernehmen,
+    neuerPunkt: neuerPunkt, setzeThemaStand: setzeThemaStand, abhaken: abhaken };
 }
 </script>
 
 <script>
 /* Oberfläche: ein Zustand S, eine render(), go(seite) blendet ein. */
-var S = beispielStand();
-S.seite = "kunden"; S.kunde = null; S.kundensicht = false; S.offen = {}; S.filter = "mir"; S.neu = null; S.nb = null;
+var SPEICHER = "zentrale.entwurf.2";
+var S = laden() || beispielStand();
+S.seite = "heute"; S.kunde = null; S.reiter = "ueberblick"; S.termin = null; S.kundensicht = false;
+S.offen = {}; S.filter = "mir"; S.neu = null; S.nb = null; S.blatt = null; S.suche = "";
+
+/* Im Entwurf nur im Tab (sessionStorage), damit Ausprobiertes ein Neuladen übersteht. */
+function laden() {
+  try {
+    var roh = sessionStorage.getItem(SPEICHER); if (!roh) { return null; }
+    var d = JSON.parse(roh); _id = d.id || 0; return { kunden: d.kunden, aufgaben: d.aufgaben };
+  } catch (e) { return null; }
+}
+function speichern() {
+  try { sessionStorage.setItem(SPEICHER, JSON.stringify({ id: _id, kunden: S.kunden, aufgaben: S.aufgaben })); } catch (e) { /* ohne Speicher geht es auch */ }
+}
 
 var app = document.getElementById("app");
 var esc = function (s) { return String(s == null ? "" : s).replace(/[&<>"]/g, function (c) { return { "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]; }); };
 var HAKEN_SVG = '<svg viewBox="0 0 14 14" aria-hidden="true"><path d="M2.5 7.4l2.9 2.9 6-6.4"/></svg>';
+var WOCHENTAG = ["Sonntag", "Montag", "Dienstag", "Mittwoch", "Donnerstag", "Freitag", "Samstag"];
+var MONAT = ["Januar", "Februar", "März", "April", "Mai", "Juni", "Juli", "August", "September", "Oktober", "November", "Dezember"];
 function kundeVon(id) { return S.kunden.filter(function (k) { return k.id === id; })[0]; }
 function aufgabeVon(id) { return S.aufgaben.filter(function (a) { return a.kunde === id; })[0]; }
+function terminVon(k, id) { return k.termine.filter(function (t) { return t.id === id; })[0]; }
 function standPille(st, wort) { return '<span class="stand" data-st="' + st + '">' + esc(wort || STAND[st].wort) + "</span>"; }
 function sortThemen(th) { return th.slice().sort(function (a, b) { return STAND_REIHE.indexOf(a.stand) - STAND_REIHE.indexOf(b.stand); }); }
+function wann(d) { return d === HEUTE ? "heute" : d === plusTage(HEUTE, 1) ? "morgen" : datum(d); }
+function ohneWartet(t) { return t.replace(/^Wartet auf [^:]+:\s*/, ""); }
 
-function go(seite, kundeId) {
-  S.seite = seite; if (kundeId !== undefined) { S.kunde = kundeId; }
-  if (seite !== "kunde") { S.kundensicht = false; }
+function go(seite, opt) {
+  opt = opt || {};
+  S.seite = seite;
+  if (opt.kunde !== undefined) { S.kunde = opt.kunde; }
+  if (opt.reiter) { S.reiter = opt.reiter; }
+  if (opt.termin !== undefined) { S.termin = opt.termin; }
+  if (seite !== "akte") { S.kundensicht = false; }
+  S.blatt = null; S.geradeAb = null;
   render(true);
   window.scrollTo({ top: 0 });
 }
 
 function render(rein) {
-  var html = S.seite === "kunden" ? seiteKunden() : S.seite === "kunde" ? seiteKunde() : S.seite === "nach" ? seiteNach() : seiteAufgaben();
+  var html = { heute: seiteHeute, kunden: seiteKunden, neu: seiteNeuerKunde, akte: seiteAkte, termin: seiteTermin, nach: seiteNach, aufgaben: seiteAufgaben }[S.seite]();
   app.innerHTML = '<div class="' + (rein ? "seite" : "") + '">' + html + "</div>";
   kopf();
-  filterGleiter();
+  app.querySelectorAll(".umschalter").forEach(gleiter);
   mailHoehe();
+  speichern();
   S.neu = null;
+}
+
+function gleiter(g) {
+  var akt = g.querySelector('button[aria-pressed="true"]'), gl = g.querySelector(".gleiter");
+  if (!akt || !gl) { return; }
+  gl.style.left = akt.offsetLeft + "px"; gl.style.width = akt.offsetWidth + "px";
 }
 
 function mailHoehe() {
@@ -715,65 +964,170 @@ function mailHoehe() {
   if (m) { m.style.height = "auto"; m.style.height = (m.scrollHeight + 4) + "px"; }
 }
 
+function offenBeiMir() {
+  var n = 0;
+  S.aufgaben.forEach(function (a) { a.punkte.forEach(function (p) { if (!p.fertig && p.art === "mir") { n += 1; } }); });
+  return n;
+}
+
 function kopf() {
-  var oben = S.seite === "aufgaben" ? "aufgaben" : "kunden";
+  var oben = S.seite === "aufgaben" ? "aufgaben" : S.seite === "heute" ? "heute" : "kunden";
   var g = document.getElementById("hauptwahl");
   g.querySelectorAll("button").forEach(function (b) { b.setAttribute("aria-pressed", String(b.dataset.geh === oben)); });
-  var offen = 0;
-  S.aufgaben.forEach(function (a) { a.punkte.forEach(function (p) { if (!p.fertig && p.art === "mir") { offen += 1; } }); });
-  document.getElementById("zahl-aufgaben").textContent = offen;
-  var akt = g.querySelector('[aria-pressed="true"]'), gl = g.querySelector(".gleiter");
-  gl.style.left = akt.offsetLeft + "px"; gl.style.width = akt.offsetWidth + "px";
+  document.getElementById("zahl-aufgaben").textContent = offenBeiMir();
+  gleiter(g);
+}
+
+/* ---------- Heute ---------- */
+function ueberfaellig() {
+  var r = [];
+  S.aufgaben.forEach(function (a) {
+    a.punkte.forEach(function (p) {
+      if (p.art === "kunde" && p.wieder && p.wieder <= HEUTE && (!p.fertig || (S.geradeAb && S.geradeAb[p.id]))) { r.push({ a: a, p: p, k: kundeVon(a.kunde) }); }
+    });
+  });
+  return r;
+}
+
+function seiteHeute() {
+  var t = [], h = new Date(HEUTE + "T12:00:00");
+  var offen = [];
+  S.kunden.forEach(function (k) { offeneTermine(k).forEach(function (tm) { offen.push({ k: k, tm: tm }); }); });
+  var spaet = ueberfaellig();
+  t.push('<div class="schmal"><div class="ansage"><div><h1>' + WOCHENTAG[h.getDay()] + ", " + h.getDate() + ". " + MONAT[h.getMonth()] + "</h1>");
+  t.push("<p>" + [offen.length + (offen.length === 1 ? " Termin" : " Termine") + " nachbereiten", spaet.filter(function (s) { return !s.p.fertig; }).length + " überfällig", offenBeiMir() + " Punkte bei mir"].join(" · ") + "</p></div></div>");
+
+  t.push('<section class="abschnitt"><h2>Nachbereiten</h2>');
+  if (!offen.length) { t.push('<p class="leer">Alle Termine sind nachbereitet.</p>'); }
+  offen.forEach(function (o) {
+    t.push('<div class="nachbereiten-karte"><div class="was"><b>' + esc(o.k.name) + "</b><span>" + esc(o.tm.art) + " " + wann(o.tm.d) + (o.tm.mitschrift ? "" : " · noch keine Mitschrift") +
+      '</span></div><button type="button" class="knopf akzent breit-mobil" data-termin-oeffnen="' + o.k.id + "|" + o.tm.id + '">Öffnen</button></div>');
+  });
+  t.push("</section>");
+
+  t.push('<section class="abschnitt"><h2>Wartet über die Wiedervorlage</h2>');
+  if (!spaet.length) { t.push('<p class="leer">Niemand ist über der Wiedervorlage.</p>'); }
+  else {
+    t.push('<div class="liste">');
+    spaet.forEach(function (s) {
+      t.push('<div class="lzeile mit-haken"><button type="button" class="haken" role="checkbox" aria-checked="' + !!s.p.fertig + '" data-ab="' + s.a.id + "|" + s.p.id + '" aria-label="Erhalten: ' + esc(s.p.t) + '">' + HAKEN_SVG + "</button>" +
+        '<span><span class="haupt">' + esc(s.k.name) + '</span><br><span class="neben">' + esc(ohneWartet(s.p.t)) + "</span></span>" +
+        '<span class="rechts-spalte"><span class="draengt">seit ' + tageZwischen(s.p.seit, HEUTE) + " Tagen</span>" +
+        '<button type="button" class="textknopf" data-akte="' + s.k.id + '">Zur Akte</button></span></div>');
+    });
+    t.push("</div>");
+  }
+  t.push("</section>");
+
+  var kommend = [];
+  S.kunden.forEach(function (k) { k.termine.forEach(function (tm) { if (tm.d > HEUTE) { kommend.push({ k: k, tm: tm }); } }); });
+  kommend.sort(function (a, b) { return a.tm.d < b.tm.d ? -1 : 1; });
+  t.push('<section class="abschnitt"><h2>Nächste Termine</h2>');
+  if (!kommend.length) { t.push('<p class="leer">Keine Termine eingetragen.</p>'); }
+  else {
+    t.push('<div class="liste">');
+    kommend.forEach(function (o) {
+      var vor = o.k.themen.filter(function (th) { return th.stand === "naechstes"; }).map(function (th) { return th.name; });
+      t.push('<button type="button" class="lzeile" data-termin-oeffnen="' + o.k.id + "|" + o.tm.id + '"><span><span class="haupt">' + esc(o.k.name) + '</span><br><span class="neben">' + esc(o.tm.art) + (vor.length ? " · Thema: " + esc(vor.join(", ")) : "") +
+        '</span></span><span class="rechts-spalte">' + datum(o.tm.d) + "</span></button>");
+    });
+    t.push("</div>");
+  }
+  t.push("</section></div>");
+  return t.join("");
 }
 
 /* ---------- Kunden ---------- */
-function lageText(k) {
+function lage(k) {
   var a = aufgabeVon(k.id);
   var warten = a ? a.punkte.filter(function (p) { return p.art === "kunde" && !p.fertig; }) : [];
-  if (k.offenerTermin) { return { text: k.offenerTermin.art + " " + (k.offenerTermin.d === HEUTE ? "heute" : datum(k.offenerTermin.d)) + ", nicht nachbereitet", draengt: true }; }
+  var ot = offeneTermine(k)[0];
+  if (ot) { return { text: ot.art + " " + wann(ot.d) + ", nicht nachbereitet", draengt: true }; }
   var alt = warten.filter(function (p) { return p.wieder && p.wieder <= HEUTE; })[0];
-  if (alt) { return { text: "Wartet seit " + tageZwischen(alt.seit, HEUTE) + " Tagen: " + p_kurz(alt.t), draengt: true }; }
-  if (k.naechsterTermin) { return { text: "Nächster Termin " + datumKurz(k.naechsterTermin), draengt: false }; }
+  if (alt) { return { text: "Wartet seit " + tageZwischen(alt.seit, HEUTE) + " Tagen", draengt: true }; }
+  var nt = naechsterTermin(k);
+  if (nt) { return { text: nt.art + " " + datumKurz(nt.d), draengt: false }; }
   var mir = a ? a.punkte.filter(function (p) { return p.art === "mir" && !p.fertig; }).length : 0;
-  return { text: mir ? mir + (mir === 1 ? " Punkt" : " Punkte") + " bei mir" : "Nichts offen", draengt: false };
+  return { text: mir ? mir + (mir === 1 ? " Punkt" : " Punkte") + " bei mir" : k.themen.length ? "Nichts offen" : "Neu", draengt: false };
 }
-function p_kurz(t) { return t.replace(/^Wartet auf [^:]+:\s*/, ""); }
 
 function seiteKunden() {
-  var t = [];
-  t.push('<div class="kunden">');
-  var offen = S.kunden.filter(function (k) { return k.offenerTermin; });
-  t.push('<div class="ansage"><h1>' + (offen.length ? offen.length + (offen.length === 1 ? " Termin wartet" : " Termine warten") + " aufs Nachbereiten" : "Alle Termine nachbereitet") + "</h1></div>");
-  offen.forEach(function (k) {
-    t.push('<div class="nachbereiten-karte"><div class="was"><b>' + esc(k.name) + "</b><span>" + esc(k.offenerTermin.art) + " " + (k.offenerTermin.d === HEUTE ? "heute" : datum(k.offenerTermin.d)) +
-      '</span></div><button type="button" class="knopf akzent breit-mobil" data-nachbereiten="' + k.id + '">Nachbereiten</button></div>');
-  });
-  t.push('<div class="liste" role="list">');
-  S.kunden.forEach(function (k) {
-    var l = lageText(k);
-    t.push('<button type="button" class="kzeile" role="listitem" data-kunde="' + k.id + '">' +
-      '<span><span class="name">' + esc(k.name) + '</span><br><span class="profil">' + esc(k.profil) + "</span></span>" +
-      '<span class="rechts-spalte">' +
-      '<span class="punktreihe" aria-hidden="true">' + sortThemen(k.themen).map(function (th) { return '<i data-st="' + th.stand + '" title="' + esc(th.name) + '"></i>'; }).join("") + "</span>" +
-      '<span class="lage' + (l.draengt ? " draengt" : "") + '">' + esc(l.text) + "</span></span></button>");
+  var t = [], q = S.suche.toLowerCase();
+  t.push('<div class="schmal"><div class="ansage"><div><h1>' + S.kunden.length + ' Kunden</h1></div><button type="button" class="knopf akzent" data-geh="neu">Neuer Kunde</button></div>');
+  t.push('<input class="feld suche" id="suche" type="search" placeholder="Name suchen" autocomplete="off" aria-label="Kunden suchen" value="' + esc(S.suche) + '">');
+  t.push('<div class="liste" id="kundenliste">');
+  S.kunden.slice().sort(function (a, b) { return a.name.localeCompare(b.name, "de"); }).forEach(function (k) {
+    var l = lage(k);
+    var sichtbar = !q || k.name.toLowerCase().indexOf(q) >= 0;
+    t.push('<button type="button" class="lzeile" data-akte="' + k.id + '" data-name="' + esc(k.name.toLowerCase()) + '"' + (sichtbar ? "" : " hidden") + ">" +
+      '<span><span class="haupt">' + esc(k.name) + '</span><br><span class="neben">' + esc(profilText(k)) + "</span></span>" +
+      '<span class="rechts-spalte"><span class="punktreihe" aria-hidden="true">' + sortThemen(k.themen).map(function (th) { return '<i data-st="' + th.stand + '" title="' + esc(th.name) + '"></i>'; }).join("") + "</span>" +
+      '<span class="' + (l.draengt ? "draengt" : "") + '">' + esc(l.text) + "</span></span></button>");
   });
   t.push("</div></div>");
   return t.join("");
 }
 
-/* ---------- Kundenseite ---------- */
-function seiteKunde() {
+function seiteNeuerKunde() {
+  var t = [];
+  t.push('<div class="schmal"><button type="button" class="zurueck" data-geh="kunden">‹ Kunden</button><div class="ansage"><div><h1>Neuer Kunde</h1></div></div>');
+  t.push('<form class="karte formular" id="kunde-form" novalidate>');
+  t.push('<div class="feld-gruppe"><label class="beschriftung" for="nk-vorname">Vorname</label><input class="feld" id="nk-vorname" name="vorname" autocomplete="off"></div>');
+  t.push('<div class="feld-gruppe"><label class="beschriftung" for="nk-nachname">Nachname</label><input class="feld" id="nk-nachname" name="nachname" autocomplete="off"></div>');
+  t.push('<div class="feld-gruppe"><label class="beschriftung" for="nk-partner">Partner (Vorname, falls zu zweit)</label><input class="feld" id="nk-partner" name="partner" autocomplete="off"></div>');
+  t.push('<div class="feld-gruppe"><label class="beschriftung" for="nk-jahr">Geburtsjahr</label><input class="feld" id="nk-jahr" name="geburtsjahr" inputmode="numeric" autocomplete="off" placeholder="z. B. 1992"></div>');
+  t.push('<div class="feld-gruppe ganz"><span class="beschriftung">Tätigkeit</span><div class="chips" id="nk-taetigkeit">' +
+    TAETIGKEITEN.map(function (x) { return '<button type="button" class="chip" data-taetigkeit="' + esc(x) + '" aria-pressed="false">' + esc(x) + "</button>"; }).join("") + "</div></div>");
+  t.push('<div class="feld-gruppe"><label class="beschriftung" for="nk-mail">E-Mail</label><input class="feld" id="nk-mail" name="mail" type="email" autocomplete="off"></div>');
+  t.push('<div class="feld-gruppe"><label class="beschriftung" for="nk-tel">Telefon</label><input class="feld" id="nk-tel" name="tel" type="tel" autocomplete="off"></div>');
+  t.push('<div class="ganz zeile-knoepfe"><span class="herkunft-text" id="nk-fehler" role="alert"></span><button type="submit" class="knopf akzent rechts breit-mobil">Anlegen</button></div>');
+  t.push("</form></div>");
+  return t.join("");
+}
+
+/* ---------- Kundenakte ---------- */
+var REITER = [["ueberblick", "Überblick"], ["finanzen", "Finanzen"], ["termine", "Termine"], ["aufgaben", "Aufgaben"], ["verlauf", "Verlauf"]];
+var REITER_KUNDE = ["ueberblick", "finanzen", "verlauf"];
+
+function seiteAkte() {
   var k = kundeVon(S.kunde), ks = S.kundensicht, t = [];
+  if (ks && REITER_KUNDE.indexOf(S.reiter) < 0) { S.reiter = "ueberblick"; }
   t.push('<button type="button" class="zurueck" data-geh="kunden">‹ Kunden</button>');
-  t.push('<div class="kunde-kopf"><div><h1>' + esc(k.name) + '</h1><p class="profil">' + esc(k.profil) + "</p></div>");
+  t.push('<div class="akte-kopf"><div><h1>' + esc(k.name) + '</h1><p class="profil">' + esc([profilText(k), ks ? "" : k.mail, ks ? "" : k.tel].filter(Boolean).join(" · ")) + "</p></div>");
   t.push('<div class="aktionen">');
   t.push('<button type="button" class="kundensicht-schalter" id="kundensicht" aria-pressed="' + ks + '"><span class="bahn"></span>Mit ' + esc(k.vorname) + " ansehen</button>");
-  if (!ks) { t.push('<button type="button" class="knopf ' + (k.offenerTermin ? "akzent" : "still") + ' breit-mobil" data-nachbereiten="' + k.id + '">' + (k.offenerTermin ? k.offenerTermin.art + " nachbereiten" : "Termin nachbereiten") + "</button>"); }
+  if (!ks) { t.push('<button type="button" class="knopf akzent breit-mobil" id="neuer-termin">Neuer Termin</button>'); }
   t.push("</div></div>");
+  if (S.blatt === "termin") { t.push(blattTermin(k)); }
 
-  t.push('<div class="kunde-raster"><section aria-label="Themen">');
+  t.push('<div class="reiter-leiste"><div class="umschalter" id="reiter" role="group" aria-label="Akte"><span class="gleiter" aria-hidden="true"></span>');
+  REITER.forEach(function (r) {
+    if (ks && REITER_KUNDE.indexOf(r[0]) < 0) { return; }
+    var zahl = "";
+    if (r[0] === "aufgaben") { var a = aufgabeVon(k.id); var n = a ? a.punkte.filter(function (p) { return !p.fertig; }).length : 0; if (n) { zahl = ' <span class="zahl-klein">' + n + "</span>"; } }
+    if (r[0] === "termine") { var o = offeneTermine(k).length; if (o) { zahl = ' <span class="zahl-klein">' + o + "</span>"; } }
+    t.push('<button type="button" data-reiter="' + r[0] + '" aria-pressed="' + (S.reiter === r[0]) + '">' + r[1] + zahl + "</button>");
+  });
+  t.push("</div></div>");
+  t.push({ ueberblick: reiterUeberblick, finanzen: reiterFinanzen, termine: reiterTermine, aufgaben: reiterAufgaben, verlauf: reiterVerlauf }[S.reiter](k, ks));
+  return t.join("");
+}
+
+function blattTermin(k) {
+  var t = [], vorwahl = k.termine.length ? 1 : 0;
+  t.push('<div class="karte" style="margin-bottom:22px"><div class="karte-kopf"><h2>Neuer Termin</h2><button type="button" class="textknopf" id="blatt-zu">Abbrechen</button></div>');
+  t.push('<div class="zeile-knoepfe" style="align-items:flex-end"><div class="feld-gruppe"><span class="beschriftung">Art</span><div class="chips" id="nt-art">' +
+    TERMINARTEN.map(function (a, i) { return '<button type="button" class="chip" data-art="' + esc(a) + '" aria-pressed="' + (i === vorwahl) + '">' + esc(a) + "</button>"; }).join("") + "</div></div>");
+  t.push('<div class="feld-gruppe"><label class="beschriftung" for="nt-datum">Datum</label><input class="feld" id="nt-datum" type="date" value="' + HEUTE + '"></div>');
+  t.push('<button type="button" class="knopf akzent rechts" id="nt-anlegen">Anlegen</button></div></div>');
+  return t.join("");
+}
+
+function reiterUeberblick(k, ks) {
+  var t = [];
+  t.push('<div class="raster"><section aria-label="Themen">');
   if (!k.themen.length) {
-    t.push('<div class="karte leise">Noch keine Themen. Sie entstehen beim Nachbereiten des ersten Termins.</div>');
+    t.push('<p class="leer">Noch keine Themen. Sie entstehen beim Nachbereiten eines Termins' + (ks ? "." : " oder über die Knöpfe darunter.") + "</p>");
   } else {
     var zahl = {};
     k.themen.forEach(function (th) { zahl[th.stand] = (zahl[th.stand] || 0) + 1; });
@@ -781,57 +1135,220 @@ function seiteKunde() {
       return standPille(s, zahl[s] + " " + (s === "kunde" ? (ks ? (k.paar ? "bei euch" : "bei dir") : "beim Kunden") : STAND[s].kurz));
     }).join("") + "</div>");
     t.push('<div class="themen">');
-    sortThemen(k.themen).forEach(function (th) {
-      var faden = th.faden.filter(function (f) { return !(ks && f.intern); });
-      var auf = !!S.offen[th.id];
-      var wort = th.stand === "kunde" && ks ? (k.paar ? "Bei euch" : "Bei dir") : STAND[th.stand].wort;
-      t.push('<article class="thema" data-thema="' + th.id + '">');
-      t.push('<button type="button" class="thema-kopf" data-auf="' + th.id + '" aria-expanded="' + auf + '"><span class="tname">' + esc(th.name) + '</span>' + standPille(th.stand, wort) + '<span class="twas">' + esc(th.was) + "</span></button>");
-      if (auf) {
-        t.push('<ol class="faden-liste">' + faden.slice().reverse().map(function (f) {
-          return '<li class="' + (S.neu && S.neu.indexOf(f.id) >= 0 ? "neu" : "") + '"><span class="d">' + datumKurz(f.d) + "</span><span>" + esc(f.text) + "</span></li>";
-        }).join("") + "</ol>");
-      } else {
-        t.push('<div class="faden" aria-hidden="true">' + faden.map(function (f, i) {
-          var letzter = i === faden.length - 1;
-          return (i ? '<span class="s"></span>' : "") + '<span class="k' + (letzter ? " letzter" : "") + '" data-st="' + th.stand + '"></span>';
-        }).join("") + '<span class="wann">' + (faden.length ? "seit " + datumKurz(faden[0].d) + " · " + faden.length + (faden.length === 1 ? " Schritt" : " Schritte") : "") + "</span></div>");
-      }
-      t.push("</article>");
-    });
+    sortThemen(k.themen).forEach(function (th) { t.push(themaKarte(k, th, ks)); });
     t.push("</div>");
+  }
+  if (!ks) {
+    var fehlt = Object.keys(WIKI).filter(function (id) { return !k.themen.some(function (th) { return th.wiki === id; }); });
+    if (fehlt.length) {
+      t.push('<div class="chips" style="margin-top:14px">' + fehlt.map(function (id) { return '<button type="button" class="chip plus" data-thema-dazu="' + id + '">+ ' + esc(WIKI[id].name) + "</button>"; }).join("") + "</div>");
+    }
   }
   t.push("</section>");
 
-  t.push('<aside class="seitenspalte"><div class="karte"><h2>Verlauf</h2><ol class="verlauf">');
-  k.verlauf.filter(function (v) { return !(ks && v.intern); }).slice().reverse().forEach(function (v) {
+  t.push('<aside class="seitenspalte">');
+  var ot = offeneTermine(k)[0], nt = naechsterTermin(k);
+  if (!ks && ot) {
+    t.push('<div class="nachbereiten-karte"><div class="was"><b>' + esc(ot.art) + " " + wann(ot.d) + '</b><span>nicht nachbereitet</span></div><button type="button" class="knopf akzent" data-termin-oeffnen="' + k.id + "|" + ot.id + '">Öffnen</button></div>');
+  } else if (nt) {
+    t.push('<button type="button" class="karte klick-karte" ' + (ks ? "disabled" : 'data-termin-oeffnen="' + k.id + "|" + nt.id + '"') + '><span class="beschriftung">' + (ks ? "Unser nächster Termin" : "Nächster Termin") + '</span><div class="mini-zahl">' + datum(nt.d) + '</div><span class="leise">' + esc(nt.art) + "</span></button>");
+  }
+  if (k.finanzen) {
+    var s = finanzSummen(k.finanzen);
+    t.push('<button type="button" class="karte klick-karte" data-reiter="finanzen"><span class="beschriftung">Frei im Monat</span><div class="mini-zahl' + (s.frei < 0 ? " minus" : "") + '">' + esc(euro(s.frei)) + "</div>" + balkenHtml(s, true) +
+      '<span class="fin-stand" style="display:block;margin-top:8px">Stand ' + datum(k.finanzen.stand) + "</span></button>");
+  } else if (!ks) {
+    t.push('<div class="leer">Finanzen noch nicht aufgenommen. <button type="button" class="textknopf" data-reiter="finanzen">Aufnehmen</button></div>');
+  }
+  if (!ks) {
+    var a = aufgabeVon(k.id);
+    var mir = a ? a.punkte.filter(function (p) { return !p.fertig && p.art === "mir"; }).length : 0;
+    var kd = a ? a.punkte.filter(function (p) { return !p.fertig && p.art === "kunde"; }).length : 0;
+    t.push('<button type="button" class="karte klick-karte" data-reiter="aufgaben"><span class="beschriftung">In Klar</span><div class="mini-zahl">' + mir + ' <small>bei mir</small></div><span class="leise">' + kd + " " + (kd === 1 ? "wartet" : "warten") + " auf " + esc(k.vorname) + "</span></button>");
+  }
+  t.push("</aside></div>");
+  return t.join("");
+}
+
+function themaKarte(k, th, ks) {
+  var t = [], auf = !!S.offen[th.id];
+  var wort = th.stand === "kunde" && ks ? (k.paar ? "Bei euch" : "Bei dir") : STAND[th.stand].wort;
+  t.push('<article class="thema" data-thema="' + th.id + '">');
+  t.push('<button type="button" class="thema-kopf" data-auf="' + th.id + '" aria-expanded="' + auf + '"><span class="tname">' + esc(th.name) + "</span>" + standPille(th.stand, wort) + '<span class="twas">' + esc(th.was) + "</span></button>");
+  if (auf) {
+    t.push('<div class="thema-innen"><ol class="faden-liste">' + th.faden.slice().reverse().map(function (f) {
+      return '<li class="' + (S.neu && S.neu.indexOf(f.id) >= 0 ? "neu" : "") + '"><span class="d">' + datumKurz(f.d) + "</span><span>" + esc(f.text) + "</span></li>";
+    }).join("") + "</ol>");
+    if (!ks) {
+      t.push('<div class="stand-wahl" role="group" aria-label="Stand ändern">' + STAND_REIHE.map(function (s) {
+        return '<button type="button" data-thema-stand="' + th.id + "|" + s + '" aria-pressed="' + (th.stand === s) + '">' + STAND[s].wort + "</button>";
+      }).join("") + "</div>");
+    }
+    t.push("</div>");
+  } else {
+    t.push('<div class="faden" aria-hidden="true">' + th.faden.map(function (f, i) {
+      return (i ? '<span class="s"></span>' : "") + '<span class="k' + (i === th.faden.length - 1 ? " letzter" : "") + '" data-st="' + th.stand + '"></span>';
+    }).join("") + '<span class="wann">' + (th.faden.length ? "seit " + datumKurz(th.faden[0].d) + " · " + th.faden.length + (th.faden.length === 1 ? " Schritt" : " Schritte") : "") + "</span></div>");
+  }
+  t.push("</article>");
+  return t.join("");
+}
+
+var TOPF_NAME = { fix: "Verträge", vers: "Versicherungen", leben: "Leben", spar: "Sparen", frei: "frei", fehlt: "fehlt" };
+function balkenHtml(s, klein) {
+  var basis = s.frei < 0 ? s.aus : s.ein;
+  var kl = "balken" + (klein ? " klein" : "");
+  if (!basis) { return '<div class="' + kl + '"></div>'; }
+  var teile = TOEPFE.filter(function (g) { return s[g] > 0; }).map(function (g) { return [g, s[g]]; });
+  if (s.frei > 0) { teile.push(["frei", s.frei]); }
+  return '<div class="' + kl + '" role="img" aria-label="Aufteilung des Einkommens">' + teile.map(function (x) {
+    var anteil = x[1] / basis;
+    return '<i data-t="' + x[0] + '" style="flex-grow:' + x[1] + '" title="' + TOPF_NAME[x[0]] + " " + euro(x[1]) + '">' + (!klein && anteil > 0.13 ? TOPF_NAME[x[0]] : "") + "</i>";
+  }).join("") + "</div>";
+}
+
+function freiText(s) { return (s.frei < 0 ? "−" : "") + esc(zahlText(Math.abs(Math.round(s.frei * 100) / 100))) + "<small>€</small>"; }
+
+function reiterFinanzen(k) {
+  var t = [];
+  if (!k.finanzen) {
+    t.push('<div class="karte" style="max-width:640px"><h2 style="font-size:20px;margin-bottom:6px">Finanzen aufnehmen</h2><p class="leise" style="margin-bottom:16px">Einnahmen, feste Kosten, Versicherungen, Leben, Sparen und Vermögen. Ein Posten je Zeile.</p>' +
+      '<button type="button" class="knopf akzent" id="finanzen-start">Aufnahme beginnen</button></div>');
+    return t.join("");
+  }
+  var s = finanzSummen(k.finanzen);
+  t.push('<div class="karte"><div class="fin-kopf"><div class="rein">Rein im Monat<b id="fin-ein">' + esc(euro(s.ein)) + '</b></div><div style="text-align:right"><div class="grosse-zahl' + (s.frei < 0 ? " minus" : "") + '" id="fin-frei">' + freiText(s) +
+    '</div><span class="leise" id="fin-frei-wort">' + (s.frei < 0 ? "fehlen im Monat" : "frei im Monat") + '</span></div></div><div id="balken-platz">' + balkenHtml(s, false) + '</div><p class="fin-stand" id="fin-stand" style="margin-top:10px">Stand ' + datum(k.finanzen.stand) + "</p></div>");
+  t.push('<div class="fin-gruppen">');
+  GRUPPEN.forEach(function (g) {
+    var posten = k.finanzen.posten.filter(function (p) { return p.gruppe === g.id; });
+    t.push('<section class="karte fin-gruppe"><div class="karte-kopf"><h2><span class="topf-punkt" data-t="' + g.id + '"></span>' + esc(g.name) + '</h2><span class="summe" id="summe-' + g.id + '">' + esc(euro(s[g.id])) + "</span></div>");
+    posten.forEach(function (p) {
+      t.push('<div class="posten"><input class="feld" data-posten-name="' + p.id + '" value="' + esc(p.name) + '" aria-label="Bezeichnung" autocomplete="off" placeholder="Bezeichnung">' +
+        '<span class="betrag"><input class="feld" data-posten-betrag="' + p.id + '" value="' + esc(betragText(p.betrag)) + '" inputmode="decimal" aria-label="Betrag ' + esc(p.name) + '" autocomplete="off" placeholder="0"></span>' +
+        '<button type="button" class="weg" data-posten-weg="' + p.id + '" aria-label="' + esc(p.name || "Posten") + ' entfernen">×</button></div>');
+    });
+    var namen = posten.map(function (p) { return p.name; });
+    t.push('<div class="chips" style="margin-top:4px">' + g.vorschlaege.filter(function (v) { return namen.indexOf(v) < 0; }).slice(0, 4).map(function (v) {
+      return '<button type="button" class="chip plus" data-posten-dazu="' + g.id + "|" + esc(v) + '">+ ' + esc(v) + "</button>";
+    }).join("") + '<button type="button" class="chip plus" data-posten-dazu="' + g.id + '|">+ Eigener</button></div></section>');
+  });
+  t.push("</div>");
+  return t.join("");
+}
+
+/* Nach einer Eingabe nur Zahlen und Balken nachziehen, damit der Fokus im Feld bleibt. */
+function finanzenNachziehen(k) {
+  var s = finanzSummen(k.finanzen);
+  var frei = document.getElementById("fin-frei");
+  if (frei) { frei.innerHTML = freiText(s); frei.classList.toggle("minus", s.frei < 0); }
+  var fw = document.getElementById("fin-frei-wort"); if (fw) { fw.textContent = s.frei < 0 ? "fehlen im Monat" : "frei im Monat"; }
+  var ein = document.getElementById("fin-ein"); if (ein) { ein.textContent = euro(s.ein); }
+  GRUPPEN.forEach(function (g) { var el = document.getElementById("summe-" + g.id); if (el) { el.textContent = euro(s[g.id]); } });
+  var platz = document.getElementById("balken-platz"); if (platz) { platz.innerHTML = balkenHtml(s, false); }
+  k.finanzen.stand = HEUTE;
+  var st = document.getElementById("fin-stand"); if (st) { st.textContent = "Stand " + datum(HEUTE); }
+  var v = k.verlauf.filter(function (x) { return x.art === "finanzen" && x.d === HEUTE; })[0];
+  if (!v) { v = { id: neueId("v"), d: HEUTE, art: "finanzen", text: "" }; k.verlauf.push(v); }
+  v.text = "Finanzen aktualisiert, frei " + euro(s.frei);
+  speichern();
+}
+
+function terminStand(tm) { return tm.status === "nachbereitet" ? standPille("erledigt", "Nachbereitet") : tm.status === "geplant" ? standPille("geplant", "Geplant") : standPille("offen", "Nicht nachbereitet"); }
+
+function reiterTermine(k) {
+  var t = [];
+  if (!k.termine.length) { return '<p class="leer">Noch kein Termin. Über „Neuer Termin“ oben anlegen, dann mitschreiben oder die Mitschrift aus OneNote einfügen.</p>'; }
+  t.push('<div class="themen" style="max-width:820px">');
+  k.termine.slice().sort(function (a, b) { return a.d < b.d ? 1 : -1; }).forEach(function (tm) {
+    t.push('<button type="button" class="karte termin-karte" data-termin-oeffnen="' + k.id + "|" + tm.id + '"><span class="zeile1"><b>' + esc(tm.art) + " · " + datum(tm.d) + "</b>" + terminStand(tm) + "</span>" +
+      (tm.mitschrift ? '<span class="vorschau">' + esc(tm.mitschrift) + "</span>" : '<span class="leise">Keine Mitschrift</span>') +
+      (tm.ergebnis ? '<span class="bilanz" style="margin:0">' + tm.ergebnis.map(function (e) { return standPille(e.stand, e.name); }).join("") + "</span>" : "") + "</button>");
+  });
+  t.push("</div>");
+  return t.join("");
+}
+
+function punkteHtml(a, k, ps) {
+  return '<ul class="punkte">' + ps.map(function (p) {
+    var th = p.thema ? k.themen.filter(function (x) { return x.id === p.thema; })[0] : null;
+    var faellig = p.art === "kunde" && !p.fertig && p.wieder && p.wieder <= HEUTE;
+    return '<li data-fertig="' + (p.fertig ? "ja" : "nein") + '"><button type="button" class="haken" role="checkbox" aria-checked="' + !!p.fertig + '" data-ab="' + a.id + "|" + p.id + '" aria-label="' + esc(p.t) + '">' + HAKEN_SVG + "</button><span>" +
+      '<span class="pt">' + esc(p.t) + (th ? '<span class="tag">' + esc(th.name) + "</span>" : "") + "</span>" +
+      (faellig ? '<br><span class="pn faellig">Wiedervorlage seit ' + datumKurz(p.wieder) + ", " + tageZwischen(p.seit, HEUTE) + " Tage offen</span>" : p.notiz ? '<br><span class="pn">' + esc(p.notiz) + "</span>" : "") +
+      (p.schritte && !p.fertig ? '<span class="ablauf">' + p.schritte.map(esc).join(" · ") + "</span>" : "") + "</span></li>";
+  }).join("") + "</ul>";
+}
+
+function reiterAufgaben(k) {
+  var a = aufgabeVon(k.id), t = [];
+  t.push('<div class="aufgabe" style="max-width:820px"><div class="aufgabe-kopf"><b>' + esc("@" + k.name) + '</b><span class="klar-zeile"><span class="punkt"></span>in Klar</span></div>');
+  if (a && a.notiz) { t.push('<p class="notiz">' + esc(a.notiz) + "</p>"); }
+  if (!a || !a.punkte.length) { t.push('<p class="leise">Noch keine Punkte.</p>'); }
+  else {
+    var offen = a.punkte.filter(function (p) { return !p.fertig; }), fertig = a.punkte.filter(function (p) { return p.fertig; });
+    t.push(punkteHtml(a, k, offen.concat(fertig)));
+  }
+  t.push('<div class="neuer-punkt"><input class="feld" id="neuer-punkt" placeholder="Neuer Punkt, z. B. Kfz-Kündigung vorbereiten" autocomplete="off" aria-label="Neuer Punkt"><button type="button" class="knopf still" id="punkt-dazu">Dazu</button></div>');
+  t.push("</div>");
+  return t.join("");
+}
+
+function reiterVerlauf(k, ks) {
+  var t = [];
+  var liste = k.verlauf.filter(function (v) { return !(ks && v.intern); }).slice().sort(function (a, b) { return a.d < b.d ? 1 : a.d > b.d ? -1 : 0; });
+  t.push('<div class="karte" style="max-width:820px"><ol class="verlauf gross">');
+  liste.forEach(function (v) {
     t.push('<li data-art="' + v.art + '" class="' + (S.neu && S.neu.indexOf(v.id) >= 0 ? "neu" : "") + '"><span class="p"></span><span class="t">' +
       (v.art === "termin" ? "<b>" + esc(v.text) + "</b>" : esc(v.text)) + "<small>" + datum(v.d) + (v.themen ? " · " + esc(v.themen) : "") + "</small></span></li>");
   });
   t.push("</ol></div>");
-  if (!ks) { t.push('<div class="platzhalter"><b>Finanzen</b>Einnahmen, Ausgaben und was frei ist, kommen mit Schritt 3 hierher.</div>'); }
+  return t.join("");
+}
+
+/* ---------- Termin mit Mitschrift ---------- */
+function seiteTermin() {
+  var k = kundeVon(S.kunde), tm = terminVon(k, S.termin), t = [];
+  t.push('<button type="button" class="zurueck" data-akte="' + k.id + '" data-zu-reiter="termine">‹ ' + esc(k.name) + "</button>");
+  t.push('<div class="akte-kopf"><div><h1>' + esc(tm.art) + '</h1><p class="profil">' + esc(k.name) + " · " + datum(tm.d) + '</p></div><div class="aktionen">' + terminStand(tm) +
+    (tm.status === "offen" ? '<button type="button" class="knopf akzent breit-mobil" data-nachbereiten="' + k.id + "|" + tm.id + '">Nachbereiten</button>' : "") + "</div></div>");
+  t.push('<div class="raster"><section class="karte"><div class="karte-kopf"><h2>Mitschrift</h2><span class="speicher-hinweis" id="speicher-hinweis">' + (tm.mitschrift ? "gespeichert" : "") + "</span></div>");
+  t.push('<textarea class="feld mitschrift" id="mitschrift" data-termin="' + tm.id + '" aria-label="Mitschrift" placeholder="Im Termin mitschreiben oder aus OneNote einfügen">' + esc(tm.mitschrift) + "</textarea>");
+  if (!tm.mitschrift && k.id === "lea") { t.push('<div style="margin-top:12px"><button type="button" class="knopf still klein" id="beispiel-mitschrift">Beispiel-Mitschrift einfügen</button></div>'); }
+  t.push('</section><aside class="seitenspalte">');
+  if (tm.ergebnis) {
+    t.push('<div class="karte"><h2>Ergebnis</h2><div class="bilanz" style="margin:0">' + tm.ergebnis.map(function (e) { return standPille(e.stand, e.name); }).join("") + "</div></div>");
+  } else if (tm.status === "offen") {
+    t.push('<div class="karte"><h2>Nach dem Termin</h2><p class="leise" style="font-size:14px">Nachbereiten fragt Thema für Thema, wer dran ist, und legt die Aufgabe für Klar und die Mail an ' + esc(k.vorname) + " an.</p></div>");
+  }
+  var offen = k.themen.filter(function (th) { return th.stand !== "erledigt"; });
+  if (offen.length) {
+    t.push('<div class="karte"><h2>Offen bei ' + esc(k.vorname) + '</h2><div class="themen" style="gap:8px">' + sortThemen(offen).map(function (th) {
+      return '<div class="offen-zeile"><span>' + esc(th.name) + "</span>" + standPille(th.stand) + "</div>";
+    }).join("") + "</div></div>");
+  }
   t.push("</aside></div>");
   return t.join("");
 }
 
 /* ---------- Nachbereiten ---------- */
-function starteNach(kundeId) {
+function starteNach(kundeId, terminId) {
   var k = kundeVon(kundeId);
-  var termin = k.offenerTermin || { art: "Update-Termin", d: HEUTE };
   var bestand = k.themen.filter(function (th) { return th.stand !== "erledigt"; }).map(function (th) {
     return { key: "b" + th.id, bestand: th.id, wiki: th.wiki, name: th.name, quelle: "bestand", zitat: "Zuletzt: " + th.was, stand: th.stand, was: th.was, gewaehlt: true };
   });
-  S.nb = { kunde: kundeId, termin: { art: termin.art, d: termin.d }, mitschrift: "", themen: bestand, offen: 0, fertig: {}, aufgabe: null, mail: null, mailEigen: false };
-  go("nach", kundeId);
+  S.nb = { kunde: kundeId, termin: terminId, themen: bestand, offen: 0, fertig: {}, aufgabe: null, mail: null, mailEigen: false };
+  go("nach", { kunde: kundeId, termin: terminId });
 }
 
 function nbGewaehlt() { return S.nb.themen.filter(function (t) { return t.gewaehlt; }); }
+function nbTermin() { return terminVon(kundeVon(S.nb.kunde), S.nb.termin); }
 
 function themenAusMitschrift() {
   var nb = S.nb, alte = {};
   nb.themen.forEach(function (t) { alte[t.wiki || t.name] = t; });
   nb.themen = nb.themen.filter(function (t) { return t.quelle !== "mitschrift" && t.quelle !== "claude"; });
-  erkenneThemen(nb.mitschrift).forEach(function (e) {
+  erkenneThemen(nbTermin().mitschrift).forEach(function (e) {
     var da = nb.themen.filter(function (t) { return (e.wiki && t.wiki === e.wiki) || t.name === e.name; })[0];
     if (da) { da.zitat = e.zitat; return; }
     var vorher = alte[e.wiki || e.name];
@@ -843,22 +1360,20 @@ function themenAusMitschrift() {
 }
 
 function seiteNach() {
-  var nb = S.nb, k = kundeVon(nb.kunde), t = [];
+  var nb = S.nb, k = kundeVon(nb.kunde), tm = nbTermin(), t = [];
   var gew = nbGewaehlt();
-  t.push('<button type="button" class="zurueck" data-kunde="' + k.id + '">‹ ' + esc(k.name) + "</button>");
-  t.push('<div class="nach"><div class="titel"><h1>' + esc(nb.termin.art) + " nachbereiten</h1><p class=\"leise\">" + esc(k.name) + " · " + datum(nb.termin.d) + "</p></div>");
+  t.push('<button type="button" class="zurueck" data-termin-oeffnen="' + k.id + "|" + tm.id + '">‹ ' + esc(tm.art) + "</button>");
+  t.push('<div class="nach"><div class="titel"><h1>' + esc(tm.art) + ' nachbereiten</h1><p class="leise">' + esc(k.name) + " · " + datum(tm.d) + "</p></div>");
 
-  /* 0: Mitschrift */
-  frage(t, 0, "Mitschrift", nb.mitschrift ? nb.mitschrift.split("\n").filter(Boolean).length + " Zeilen aus OneNote" : "ohne Mitschrift", function () {
+  frage(t, 0, "Mitschrift", tm.mitschrift ? tm.mitschrift.split("\n").filter(Boolean).length + " Zeilen" : "ohne Mitschrift", function () {
     var x = [];
-    x.push("<h2>Was steht in deiner Mitschrift?</h2>");
-    x.push('<div><label class="beschriftung" for="mitschrift">Aus OneNote kopieren und hier einfügen</label><textarea class="feld" id="mitschrift" rows="9" placeholder="Stichpunkte aus dem Termin">' + esc(nb.mitschrift) + "</textarea></div>");
-    x.push('<div class="zeile-knoepfe">' + (k.id === "lea" ? '<button type="button" class="knopf still klein" id="beispiel-mitschrift">Beispiel-Mitschrift einfügen</button>' : "") +
+    x.push("<h2>Stimmt die Mitschrift?</h2>");
+    x.push('<div><label class="beschriftung" for="mitschrift">Ergänzen oder aus OneNote einfügen. Daraus erkennt die Zentrale die Themen.</label><textarea class="feld" id="mitschrift" data-termin="' + tm.id + '" rows="8" style="margin-top:6px">' + esc(tm.mitschrift) + "</textarea></div>");
+    x.push('<div class="zeile-knoepfe">' + (k.id === "lea" && !tm.mitschrift ? '<button type="button" class="knopf still klein" id="beispiel-mitschrift">Beispiel-Mitschrift einfügen</button>' : "") +
       '<button type="button" class="knopf rechts" data-weiter="0">Weiter: Themen</button></div>');
     return x.join("");
   });
 
-  /* 1: Themen */
   frage(t, 1, "Themen", gew.length ? gew.map(function (x) { return x.name; }).join(", ") : "keine", function () {
     var x = [];
     x.push("<h2>Welche Themen kamen vor?</h2>");
@@ -874,12 +1389,11 @@ function seiteNach() {
       if (!nb.themen.some(function (th) { return th.wiki === id; })) { x.push('<button type="button" class="chip" data-thema-neu="' + id + '" aria-pressed="false">' + esc(WIKI[id].name) + "</button>"); }
     });
     x.push("</div>");
-    x.push('<div style="display:flex;gap:8px"><input class="feld" id="eigenes-thema" placeholder="Eigenes Thema, z. B. Rechtsschutz" autocomplete="off"><button type="button" class="knopf still" id="eigenes-dazu">Dazu</button></div>');
+    x.push('<div style="display:flex;gap:8px"><input class="feld" id="eigenes-thema" placeholder="Eigenes Thema, z. B. Rechtsschutz" autocomplete="off" aria-label="Eigenes Thema"><button type="button" class="knopf still" id="eigenes-dazu">Dazu</button></div>');
     x.push('<div class="zeile-knoepfe"><button type="button" class="knopf rechts" data-weiter="1"' + (gew.length ? "" : " disabled") + ">Weiter: " + (gew.length ? esc(gew[0].name) : "Themen") + "</button></div>");
     return x.join("");
   });
 
-  /* 2…: je Thema eine Frage */
   gew.forEach(function (th, i) {
     var idx = 2 + i;
     frage(t, idx, th.name, STAND[th.stand].wort + " · " + th.was, function () {
@@ -897,7 +1411,7 @@ function seiteNach() {
         return '<button type="button" data-stand="' + o[0] + '" data-i="' + i + '" aria-pressed="' + (th.stand === o[0]) + '"><b>' + esc(o[1]) + "</b><span>" + esc(o[2]) + "</span></button>";
       }).join("") + "</div>");
       var label = th.stand === "mir" ? "Was machst du?" : th.stand === "kunde" ? "Was " + (k.paar ? "machen" : "macht") + " " + k.vorname + "?" : th.stand === "naechstes" ? "Was soll nächstes Mal dran sein?" : "Was ist rausgekommen?";
-      x.push('<div><label class="beschriftung" for="was-' + i + '">' + esc(label) + '</label><input class="feld" id="was-' + i + '" data-was="' + i + '" value="' + esc(th.was) + '" autocomplete="off"></div>');
+      x.push('<div><label class="beschriftung" for="was-' + i + '">' + esc(label) + '</label><input class="feld" id="was-' + i + '" data-was="' + i + '" value="' + esc(th.was) + '" autocomplete="off" style="margin-top:6px"></div>');
       if (th.stand === "mir" && w && w.schritte) {
         x.push('<div><span class="beschriftung">Ablauf aus dem Wiki: ' + esc(w.ablauf) + '</span><ol class="schritte">' + w.schritte.map(function (s) { return "<li>" + esc(s) + "</li>"; }).join("") + "</ol></div>");
       }
@@ -910,16 +1424,13 @@ function seiteNach() {
     });
   });
 
-  /* Ergebnis */
-  var alleFertig = gew.length && gew.every(function (th, i) { return nb.fertig[2 + i]; }) && nb.fertig[1];
+  var alleFertig = gew.length && nb.fertig[1] && gew.every(function (th, i) { return nb.fertig[2 + i]; });
   if (alleFertig) {
-    if (!nb.aufgabe) {
-      nb.aufgabe = baueAufgabe(k, nb.termin, gew);
-    }
-    if (!nb.mailEigen) { nb.mail = baueMail(k, nb.termin, gew); }
+    if (!nb.aufgabe) { nb.aufgabe = baueAufgabe(k, tm, gew); }
+    if (!nb.mailEigen) { nb.mail = baueMail(k, tm, gew); }
     var an = nb.aufgabe.punkte.filter(function (p) { return p.an !== false; }).length;
     t.push('<div class="ergebnis" id="ergebnis">');
-    t.push('<section class="karte"><h2>Für Klar</h2><p class="unter">' + esc(nb.aufgabe.titel) + " · " + an + " Punkte</p><ul class=\"punkte\">");
+    t.push('<section class="karte"><h2>Für Klar</h2><p class="unter">' + esc(nb.aufgabe.titel) + " · " + an + ' Punkte</p><ul class="punkte">');
     nb.aufgabe.punkte.forEach(function (p, j) {
       var aus = p.an === false;
       t.push('<li data-aus="' + (aus ? "ja" : "nein") + '"><button type="button" class="haken" role="checkbox" aria-checked="' + !aus + '" data-punkt-an="' + j + '" aria-label="' + esc(p.t) + ' übernehmen">' + HAKEN_SVG + "</button><span>" +
@@ -957,8 +1468,7 @@ function weiter(idx) {
   if (idx === 0) { themenAusMitschrift(); }
   if (idx <= 1) { themenFragenZuruecksetzen(); }
   nb.aufgabe = null;
-  var gew = nbGewaehlt();
-  var letzte = 1 + gew.length;
+  var letzte = 1 + nbGewaehlt().length;
   var naechste = idx + 1;
   while (naechste <= letzte && nb.fertig[naechste]) { naechste += 1; }
   nb.offen = naechste <= letzte ? naechste : -1;
@@ -971,12 +1481,12 @@ function weiter(idx) {
   }
 }
 
-/* ---------- Aufgaben ---------- */
+/* ---------- Aufgaben (alle Kunden, wie in Klar) ---------- */
 function seiteAufgaben() {
   var t = [], f = S.filter;
   var zaehl = { mir: 0, kunde: 0, fertig: 0 };
   S.aufgaben.forEach(function (a) { a.punkte.forEach(function (p) { if (p.fertig) { zaehl.fertig += 1; } else { zaehl[p.art] += 1; } }); });
-  t.push('<div class="aufgaben"><div class="ansage"><h1>' + (f === "mir" ? zaehl.mir + " Punkte bei mir" : f === "kunde" ? zaehl.kunde + " warten auf Kunden" : zaehl.fertig + " erledigt") + '</h1><p class="leise">Dieselben Aufgaben wie in Klar. Abhaken hier oder in Klar, das Thema beim Kunden zieht nach.</p></div>');
+  t.push('<div class="schmal"><div class="ansage"><div><h1>' + (f === "mir" ? zaehl.mir + " Punkte bei mir" : f === "kunde" ? zaehl.kunde + " warten auf Kunden" : zaehl.fertig + " erledigt") + "</h1><p>Dieselben Aufgaben wie in Klar. Abhaken hier oder in Klar, die Akte zieht nach.</p></div></div>");
   t.push('<div><div class="umschalter" id="filter" role="group" aria-label="Filter"><span class="gleiter" aria-hidden="true"></span>' +
     [["mir", "Bei mir"], ["kunde", "Wartet auf Kunden"], ["fertig", "Erledigt"]].map(function (o) {
       return '<button type="button" data-filter="' + o[0] + '" aria-pressed="' + (f === o[0]) + '">' + o[1] + "</button>";
@@ -987,27 +1497,12 @@ function seiteAufgaben() {
     var ps = a.punkte.filter(function (p) { return f === "fertig" ? p.fertig : (!p.fertig && p.art === f) || (p.fertig && S.geradeAb && S.geradeAb[p.id]); });
     if (!ps.length) { return; }
     gezeigt += 1;
-    t.push('<article class="aufgabe"><div class="aufgabe-kopf"><button type="button" data-kunde="' + k.id + '">' + esc(a.titel) + '</button></div><p class="notiz">' + esc(a.notiz) + '</p><ul class="punkte">');
-    ps.forEach(function (p) {
-      var th = p.thema ? k.themen.filter(function (x) { return x.id === p.thema; })[0] : null;
-      var faellig = p.art === "kunde" && !p.fertig && p.wieder && p.wieder <= HEUTE;
-      t.push('<li><button type="button" class="haken" role="checkbox" aria-checked="' + !!p.fertig + '" data-ab="' + a.id + "|" + p.id + '" aria-label="' + esc(p.t) + '">' + HAKEN_SVG + "</button><span>" +
-        '<span class="pt">' + esc(p.t) + (th ? '<span class="tag">' + esc(th.name) + "</span>" : "") + "</span>" +
-        (faellig ? '<br><span class="pn faellig">Wiedervorlage seit ' + datumKurz(p.wieder) + ", seit " + tageZwischen(p.seit, HEUTE) + " Tagen offen</span>" : p.notiz ? '<br><span class="pn">' + esc(p.notiz) + "</span>" : "") +
-        (p.schritte && !p.fertig ? '<span class="ablauf">' + p.schritte.map(esc).join(" · ") + "</span>" : "") +
-        "</span></li>");
-    });
-    t.push("</ul></article>");
+    t.push('<article class="aufgabe"><div class="aufgabe-kopf"><button type="button" data-akte="' + k.id + '" data-zu-reiter="aufgaben">' + esc(a.titel) + '</button><span class="klar-zeile"><span class="punkt"></span>in Klar</span></div>' +
+      (a.notiz ? '<p class="notiz">' + esc(a.notiz) + "</p>" : "") + punkteHtml(a, k, ps) + "</article>");
   });
   if (!gezeigt) { t.push('<p class="leer">Hier ist gerade nichts.</p>'); }
   t.push("</div>");
   return t.join("");
-}
-
-function filterGleiter() {
-  var g = document.getElementById("filter"); if (!g) { return; }
-  var akt = g.querySelector('[aria-pressed="true"]'), gl = g.querySelector(".gleiter");
-  gl.style.left = akt.offsetLeft + "px"; gl.style.width = akt.offsetWidth + "px";
 }
 
 /* ---------- Ereignisse ---------- */
@@ -1017,32 +1512,86 @@ function toast(text) {
   clearTimeout(toastZeit); toastZeit = setTimeout(function () { el.classList.remove("da"); }, 2600);
 }
 
+function postenDazu(k, gruppe, name) {
+  var p = { id: neueId("g"), gruppe: gruppe, name: name, betrag: 0 };
+  k.finanzen.posten.push(p);
+  render(false);
+  var f = app.querySelector(name ? '[data-posten-betrag="' + p.id + '"]' : '[data-posten-name="' + p.id + '"]');
+  if (f) { f.focus(); }
+}
+
 document.addEventListener("click", function (e) {
   var b = e.target.closest("button"); if (!b) { return; }
   var d = b.dataset;
   if (b.id === "entwurf-knopf") {
     var box = document.getElementById("entwurf-text"); box.hidden = !box.hidden; b.setAttribute("aria-expanded", String(!box.hidden)); return;
   }
-  document.getElementById("entwurf-text").hidden = true;
-  if (d.geh) { S.geradeAb = null; go(d.geh); return; }
-  if (d.kunde) { go("kunde", d.kunde); return; }
-  if (d.nachbereiten) { starteNach(d.nachbereiten); return; }
-  if (b.id === "kundensicht") { S.kundensicht = !S.kundensicht; render(false); return; }
+  if (!b.closest("#entwurf-text")) { document.getElementById("entwurf-text").hidden = true; }
+  if (b.id === "zuruecksetzen") {
+    try { sessionStorage.removeItem(SPEICHER); } catch (err) { /* egal */ }
+    var frisch = beispielStand(); S.kunden = frisch.kunden; S.aufgaben = frisch.aufgaben; S.offen = {};
+    document.getElementById("entwurf-text").hidden = true; go("heute"); toast("Beispiel neu geladen"); return;
+  }
+  if (d.geh) { go(d.geh); return; }
+  if (d.akte) { go("akte", { kunde: d.akte, reiter: d.zuReiter || "ueberblick" }); return; }
+  if (d.terminOeffnen) { var to = d.terminOeffnen.split("|"); go("termin", { kunde: to[0], termin: to[1] }); return; }
+  if (d.nachbereiten) { var nbt = d.nachbereiten.split("|"); starteNach(nbt[0], nbt[1]); return; }
+  if (d.reiter) { S.reiter = d.reiter; S.blatt = null; render(false); return; }
+  if (d.filter) { S.filter = d.filter; S.geradeAb = null; render(false); return; }
+
+  /* Kunde anlegen */
+  if (d.taetigkeit) { b.parentNode.querySelectorAll(".chip").forEach(function (c) { c.setAttribute("aria-pressed", String(c === b && c.getAttribute("aria-pressed") !== "true")); }); return; }
+
+  /* Akte */
+  if (b.id === "kundensicht") { S.kundensicht = !S.kundensicht; S.blatt = null; render(false); return; }
+  if (b.id === "neuer-termin") { S.blatt = S.blatt === "termin" ? null : "termin"; render(false); return; }
+  if (b.id === "blatt-zu") { S.blatt = null; render(false); return; }
+  if (d.art) { b.parentNode.querySelectorAll(".chip").forEach(function (c) { c.setAttribute("aria-pressed", String(c === b)); }); return; }
+  if (b.id === "nt-anlegen") {
+    var k0 = kundeVon(S.kunde), artEl = app.querySelector('#nt-art [aria-pressed="true"]'), dat = document.getElementById("nt-datum").value || HEUTE;
+    var tm0 = neuerTermin(k0, artEl ? artEl.dataset.art : TERMINARTEN[0], dat);
+    go("termin", { termin: tm0.id }); toast(tm0.art + " am " + datum(dat) + " angelegt"); return;
+  }
   if (d.auf) { S.offen[d.auf] = !S.offen[d.auf]; render(false); return; }
-  if (d.filter) { S.filter = d.filter; S.geradeAb = null; render(false); filterGleiter(); return; }
+  if (d.themaStand) {
+    var ts = d.themaStand.split("|"), f0 = setzeThemaStand(kundeVon(S.kunde), ts[0], ts[1], HEUTE);
+    if (f0) { S.neu = [f0.id]; } render(false); return;
+  }
+  if (d.themaDazu) {
+    var kd = kundeVon(S.kunde), w0 = WIKI[d.themaDazu];
+    var nth = { id: neueId("t"), wiki: d.themaDazu, name: w0.name, stand: "naechstes", was: "Im nächsten Termin besprechen", faden: [{ id: neueId("f"), d: HEUTE, text: "Fürs nächste Mal vorgemerkt" }] };
+    kd.themen.push(nth); render(false); toast(w0.name + " fürs nächste Mal vorgemerkt"); return;
+  }
+  if (b.id === "punkt-dazu") { punktDazu(); return; }
+
+  /* Finanzen */
+  if (b.id === "finanzen-start") { kundeVon(S.kunde).finanzen = { stand: HEUTE, posten: [] }; render(false); return; }
+  if (d.postenDazu !== undefined) { var pd = d.postenDazu.split("|"); postenDazu(kundeVon(S.kunde), pd[0], pd.slice(1).join("|")); return; }
+  if (d.postenWeg) {
+    var kw = kundeVon(S.kunde); kw.finanzen.posten = kw.finanzen.posten.filter(function (p) { return p.id !== d.postenWeg; });
+    render(false); finanzenNachziehen(kw); return;
+  }
+
+  /* Abhaken (Heute, Akte, Aufgaben) */
   if (d.ab) {
     var teile = d.ab.split("|");
     var an = b.getAttribute("aria-checked") !== "true";
     var r = abhaken(S, teile[0], teile[1], an, HEUTE);
     b.setAttribute("aria-checked", String(an));
+    var li = b.closest("li"); if (li) { li.dataset.fertig = an ? "ja" : "nein"; }
     S.geradeAb = S.geradeAb || {}; S.geradeAb[teile[1]] = an;
     if (r && an && r.thema) { toast(r.thema.name + " bei " + r.kunde.vorname + ": " + STAND[r.thema.stand].kurz); }
     else if (r && an) { toast("Im Verlauf von " + r.kunde.vorname); }
-    kopf();
+    kopf(); speichern();
     return;
   }
-  /* Nachbereiten */
-  if (b.id === "beispiel-mitschrift") { S.nb.mitschrift = BEISPIEL_MITSCHRIFT; document.getElementById("mitschrift").value = BEISPIEL_MITSCHRIFT; return; }
+
+  /* Termin und Nachbereiten */
+  if (b.id === "beispiel-mitschrift") {
+    var m = document.getElementById("mitschrift"); m.value = BEISPIEL_MITSCHRIFT;
+    terminVon(kundeVon(S.kunde), m.dataset.termin).mitschrift = BEISPIEL_MITSCHRIFT; b.hidden = true; speichern();
+    var hb = document.getElementById("speicher-hinweis"); if (hb) { hb.textContent = "gespeichert"; } return;
+  }
   if (d.weiter !== undefined) { weiter(+d.weiter); return; }
   if (d.oeffne !== undefined) { S.nb.offen = +d.oeffne; render(false); var z = app.querySelector('[data-frage="' + d.oeffne + '"]'); if (z) { z.scrollIntoView({ block: "nearest", behavior: "smooth" }); } return; }
   if (d.themaWahl !== undefined) { var th = S.nb.themen[+d.themaWahl]; th.gewaehlt = !th.gewaehlt; themenFragenZuruecksetzen(); S.nb.aufgabe = null; render(false); return; }
@@ -1056,27 +1605,34 @@ document.addEventListener("click", function (e) {
     var t2 = nbGewaehlt()[+d.i]; t2.stand = d.stand; t2.was = vorschlagWas({ wiki: t2.wiki, stand: d.stand, was: t2.quelle === "claude" && d.stand === "kunde" ? t2.name + " schicken" : null });
     S.nb.aufgabe = null; render(false); return;
   }
-  if (d.punktAn !== undefined) {
-    var p = S.nb.aufgabe.punkte[+d.punktAn]; p.an = p.an === false; render(false); return;
-  }
+  if (d.punktAn !== undefined) { var p = S.nb.aufgabe.punkte[+d.punktAn]; p.an = p.an === false; render(false); return; }
   if (b.id === "mail-kopieren") {
     var feld = document.getElementById("mailtext");
-    var fertig = function () { toast("Mailtext kopiert"); };
-    try { navigator.clipboard.writeText(feld.value).then(fertig, function () { feld.select(); }); } catch (err) { feld.select(); }
+    try { navigator.clipboard.writeText(feld.value).then(function () { toast("Mailtext kopiert"); }, function () { feld.select(); }); } catch (err) { feld.select(); }
     return;
   }
   if (b.id === "uebernehmen") {
-    var nb = S.nb, gew = nbGewaehlt();
-    var erg = uebernehmen(S, nb.kunde, nb.termin, gew, nb.aufgabe);
-    var k = kundeVon(nb.kunde);
+    var nb = S.nb, k = kundeVon(nb.kunde);
+    var erg = uebernehmen(S, nb.kunde, nb.termin, nbGewaehlt(), nb.aufgabe);
     S.nb = null;
     k.themen.forEach(function (th) { S.offen[th.id] = false; });
-    go("kunde", k.id);
     S.neu = erg.neu.verlauf.concat(erg.neu.themen);
-    render(false);
+    S.seite = "akte"; S.reiter = "ueberblick"; S.blatt = null;
+    render(true); window.scrollTo({ top: 0 });
     toast(erg.punkte ? "In Klar: " + erg.punkte + " Punkte bei " + k.name : "Nachbereitet");
     return;
   }
+});
+
+document.addEventListener("submit", function (e) {
+  if (e.target.id !== "kunde-form") { return; }
+  e.preventDefault();
+  var f = e.target, wahl = f.querySelector('#nk-taetigkeit [aria-pressed="true"]');
+  var k = neuerKunde(S, { vorname: f.vorname.value, nachname: f.nachname.value, partner: f.partner.value, geburtsjahr: f.geburtsjahr.value,
+    taetigkeit: wahl ? wahl.dataset.taetigkeit : "", mail: f.mail.value, tel: f.tel.value });
+  if (!k) { document.getElementById("nk-fehler").textContent = "Vor- und Nachname fehlen noch."; f.vorname.focus(); return; }
+  go("akte", { kunde: k.id, reiter: "ueberblick" });
+  toast(k.name + " angelegt");
 });
 
 function eigenesThema() {
@@ -1086,22 +1642,49 @@ function eigenesThema() {
   var neu = document.getElementById("eigenes-thema"); if (neu) { neu.focus(); }
 }
 
+function punktDazu() {
+  var f = document.getElementById("neuer-punkt");
+  if (neuerPunkt(S, S.kunde, f.value)) { render(false); var n = document.getElementById("neuer-punkt"); if (n) { n.focus(); } toast("In Klar eingetragen"); }
+}
+
+var speicherZeit;
 document.addEventListener("input", function (e) {
-  var el = e.target;
-  if (el.id === "mitschrift") { S.nb.mitschrift = el.value; }
+  var el = e.target, d = el.dataset;
+  if (el.id === "mitschrift") {
+    terminVon(kundeVon(S.kunde), d.termin).mitschrift = el.value;
+    var h = document.getElementById("speicher-hinweis"); if (h) { h.textContent = "…"; }
+    clearTimeout(speicherZeit); speicherZeit = setTimeout(function () { speichern(); var h2 = document.getElementById("speicher-hinweis"); if (h2) { h2.textContent = "gespeichert"; } }, 600);
+  }
   if (el.id === "mailtext") { S.nb.mail = el.value; S.nb.mailEigen = true; mailHoehe(); }
-  if (el.dataset.was !== undefined) { nbGewaehlt()[+el.dataset.was].was = el.value; S.nb.aufgabe = null; }
+  if (d.was !== undefined) { nbGewaehlt()[+d.was].was = el.value; S.nb.aufgabe = null; }
+  if (el.id === "suche") {
+    S.suche = el.value; var q = el.value.toLowerCase();
+    app.querySelectorAll("#kundenliste [data-name]").forEach(function (z) { z.hidden = !!q && z.dataset.name.indexOf(q) < 0; });
+  }
+  if (d.postenName || d.postenBetrag) {
+    var k = kundeVon(S.kunde), id = d.postenName || d.postenBetrag;
+    var p = k.finanzen.posten.filter(function (x) { return x.id === id; })[0];
+    if (d.postenName) { p.name = el.value; } else { p.betrag = leseBetrag(el.value); }
+    finanzenNachziehen(k);
+  }
 });
 document.addEventListener("keydown", function (e) {
   if (e.key !== "Enter") { return; }
-  var el = e.target;
+  var el = e.target, d = el.dataset || {};
   if (el.id === "eigenes-thema") { e.preventDefault(); eigenesThema(); return; }
-  if (el.dataset && el.dataset.was !== undefined) { e.preventDefault(); weiter(2 + +el.dataset.was); }
+  if (el.id === "neuer-punkt") { e.preventDefault(); punktDazu(); return; }
+  if (d.was !== undefined) { e.preventDefault(); weiter(2 + +d.was); return; }
+  if (d.postenName) { e.preventDefault(); var b = app.querySelector('[data-posten-betrag="' + d.postenName + '"]'); if (b) { b.focus(); b.select(); } return; }
+  if (d.postenBetrag) {
+    e.preventDefault();
+    var felder = Array.prototype.slice.call(app.querySelectorAll("[data-posten-betrag]"));
+    var n = felder[felder.indexOf(el) + 1]; if (n) { n.focus(); n.select(); } else { el.blur(); }
+  }
 });
-window.addEventListener("resize", function () { kopf(); filterGleiter(); });
+window.addEventListener("resize", function () { kopf(); app.querySelectorAll(".umschalter").forEach(gleiter); });
 
 render(true);
-if (document.fonts && document.fonts.ready) { document.fonts.ready.then(function () { kopf(); filterGleiter(); }); }
+if (document.fonts && document.fonts.ready) { document.fonts.ready.then(function () { kopf(); app.querySelectorAll(".umschalter").forEach(gleiter); }); }
 </script>
 </body>
 </html>

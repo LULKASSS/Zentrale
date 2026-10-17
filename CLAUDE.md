@@ -19,6 +19,9 @@ Stelle. Sprache in App, Code-Kommentaren und Commits: **Deutsch**.
   - Klar bleibt die eine Aufgabenliste, die Zentrale schreibt hinein (17.10.2026).
   - Vorschläge für Aufgaben aus zwei Quellen: feste Schritte aus den Abläufen im Wiki an bestimmten Prozesspunkten,
     Claude ergänzt aus dem Freitext der Mitschrift (17.10.2026).
+  - Zur Zentrale gehört: Kunden anlegen, eine Akte je Kunde, in der man mit dem Kunden reinschaut (Themen,
+    Mitschriften, Verlauf, Aufgaben, Finanzen), Finanzdaten aufnehmen, Mitschriften und ToDos jederzeit pflegen,
+    Klar eingebunden (17.10.2026, Rückmeldung zu Entwurf 1: „der gesamte Zentrale-Gedanke ist noch nicht da“).
 - **Nicht gewollt:**
   - Eine zweite Aufgabenliste neben Klar.
   - Das Aussehen am Finanzakte-Screenshot ausrichten (17.10.2026: „ganz neu, Design soll das Ziel unterstützen,
@@ -31,11 +34,22 @@ Stelle. Sprache in App, Code-Kommentaren und Commits: **Deutsch**.
 - Entwurf 1 (17.10.2026): https://claude.ai/artifact/FagTHHJLxR3kJQt6Hbmov7. Themen statt Datumsliste: jedes Thema
   eines Kunden hat einen Stand (bei mir, beim Kunden, nächstes Mal, erledigt) und einen Faden. Nachbereiten fragt
   nacheinander: Mitschrift einfügen → Themen (aus der Mitschrift erkannt, offene von vorher vorausgewählt) → je Thema
-  „Wer ist dran?“ → Ergebnis „Für Klar“ und „Mail an …“ → „In Klar übernehmen“. Wartet auf Lukas.
+  „Wer ist dran?“ → Ergebnis „Für Klar“ und „Mail an …“ → „In Klar übernehmen“.
+  Rückmeldung: Aufgaben okay, aber es fehlt die Zentrale selbst (Kunde anlegen, Akte zum Reinschauen, Finanzen,
+  Mitschriften, Klar eingebunden).
+- Entwurf 2 (17.10.2026, gleicher Link): oben Heute · Kunden · Aufgaben. „Heute“: nachzubereitende Termine, wer über
+  der Wiedervorlage wartet, nächste Termine. „Neuer Kunde“ (Name, Partner, Geburtsjahr, Tätigkeit, Kontakt). Die
+  **Kundenakte** mit Reitern Überblick (Themen mit Stand und Faden, Stand von Hand änderbar, Thema vormerken; rechts
+  als Nächstes, frei im Monat, offen in Klar), Finanzen (Einnahmen, vier Töpfe, Vermögen, Balken, frei im Monat;
+  Änderungen landen im Verlauf), Termine (je Termin Mitschrift, jederzeit bearbeitbar, Status, Ergebnis), Aufgaben
+  (die Klar-Aufgabe des Kunden, abhaken, eigene Punkte dazu), Verlauf. „Mit … ansehen“ zeigt nur Überblick,
+  Finanzen und Verlauf. Nachbereiten startet am Termin. Im Tab gespeichert (sessionStorage), Klar gespielt.
+  Wartet auf Lukas.
 
 ## Aufbau
-- `index.html` – die ganze App. Erstes Script `<script id="kern">`: Daten, `WIKI` (Beispiel-Abläufe), Themen erkennen,
-  Aufgabe und Mail bauen, Übernehmen, Abhaken. Läuft auch in Node (`test/kern.spec.js`). Zweites Script: Oberfläche
+- `index.html` – die ganze App. Erstes Script `<script id="kern">`: Daten (Kunde mit `themen`, `termine`, `finanzen`,
+  `verlauf`; `aufgaben` = Klar-Aufgaben je Kunde), `WIKI` (Beispiel-Abläufe), `GRUPPEN` (Finanzen), Beträge lesen,
+  Summen, Kunde und Termin anlegen, Themen erkennen, Aufgabe und Mail bauen, Übernehmen, Abhaken. Läuft auch in Node (`test/kern.spec.js`). Zweites Script: Oberfläche
   (Zustand `S`, `render()`, `go(seite)`). CSS in einem `<style>`-Block (Tokens → Grundlagen → Bausteine → Bereiche).
   Look nach Skill `app-ui`, Schrift Geist über Google Fonts.
 - `scripts/` – `serve.mjs` (:5190), `check.mjs`, `artefakt.mjs <ziel>` (Fassung fürs Claude-Artifact).
@@ -54,7 +68,10 @@ Stelle. Sprache in App, Code-Kommentaren und Commits: **Deutsch**.
   nächstes Mal = grau, erledigt = grün.
 - Aufgaben nach den Klar-Regeln: eine Aufgabe je Kunde (`@Name`), Unterpunkte konkret, „Termin vereinbaren“ und
   „Termin vorbereiten“ (was, steht in der Notiz), wartet der Kunde: „Wartet auf …“ mit Wiedervorlage in 7 Tagen.
-- In der Ansicht mit dem Kunden bleibt Internes weg (Klar-Übernahme, „Mail gegenlesen“, Nachbereiten-Knopf).
+- In der Ansicht mit dem Kunden bleibt Internes weg: nur Überblick, Finanzen, Verlauf; keine Kontaktdaten, keine
+  Klar-Einträge, kein „Neuer Termin“.
+- Entwurf speichert nur im Tab (`sessionStorage`, Schlüssel `zentrale.entwurf.2`), „Beispiel neu laden“ unter „Entwurf“.
+  Die echte Fassung speichert im Konto, nicht im Browser.
 
 ## Annahmen (Lukas vorlegen)
 - Die Abläufe in `WIKI` sind Beispiele (Haftpflicht/Hausrat rechnen in PW oder Xempus, BU-Voranfrage, Altersvorsorge
@@ -62,6 +79,8 @@ Stelle. Sprache in App, Code-Kommentaren und Commits: **Deutsch**.
 - Abhaken des letzten eigenen Punkts eines Themas setzt es auf „beim Kunden“ (Angebot geschickt); erledigt der Kunde
   seinen Teil, geht es zurück zu Lukas (BU, Kfz) oder ist erledigt.
 - Wiedervorlage für „Wartet auf …“: 7 Tage.
+- Finanzen: frei = Einnahmen − (Wohnen und Verträge + Versicherungen + Leben + Sparen und Vorsorge). Vermögen getrennt,
+  zählt nicht mit. Keine Bewertung, nur Zahlen.
 
 ## Weg (Stand 17.10.2026)
 1. Klickbarer Entwurf mit erfundenen Daten (diese Fassung).

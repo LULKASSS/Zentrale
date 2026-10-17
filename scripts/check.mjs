@@ -24,7 +24,9 @@ scripts.forEach((code, i) => {
 /* 2. HTML und IDs */
 for (const need of ['<!doctype html>', '<meta charset', 'name="viewport"', '<title>'])
   if (!html.toLowerCase().includes(need.toLowerCase())) errors.push(`index.html: ${need} fehlt`);
-const ids = [...html.matchAll(/\bid="([^"$]+)"/g)].map(m => m[1]);
+/* Nur das feste HTML; was die Scripts zeichnen, prüft der Browsertest zur Laufzeit. */
+const ohneScripts = html.replace(/<script\b[\s\S]*?<\/script>/g, '');
+const ids = [...ohneScripts.matchAll(/\bid="([^"$]+)"/g)].map(m => m[1]);
 for (const d of new Set(ids.filter((v, i, a) => a.indexOf(v) !== i))) errors.push(`ID doppelt vergeben: #${d}`);
 
 /* 3. Von außen nur Google Fonts */
