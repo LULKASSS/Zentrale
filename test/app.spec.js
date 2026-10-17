@@ -105,7 +105,8 @@ test('Mit dem Kunden ansehen: nur Überblick, Finanzen, Verlauf, nichts Internes
   await page.click('#kundensicht');
   await expect(page.locator('#reiter button')).toHaveCount(3);
   await expect(page.locator('#neuer-termin')).toHaveCount(0);
-  await expect(page.locator('.bilanz')).toContainText('bei euch');
+  await expect(page.locator('.themen-legende')).toContainText('bei euch');
+  await expect(page.locator('.landing-raster')).toContainText('Seit unserem Termin am 02.10.');
   await expect(page.locator('.profil')).not.toContainText('@');
 });
 
@@ -122,6 +123,20 @@ test('Abhaken in den Aufgaben schreibt das Thema in der Akte fort', async ({ pag
   await expect(hausrat.locator('.stand')).toHaveText('Beim Kunden');
   await page.click('[data-reiter="verlauf"]');
   await expect(page.locator('.verlauf')).toContainText('Hausrat: Vertrag vergleichen');
+});
+
+test('Landingpage: Ring, Fahrplan mit Terminen und heute, Tooltip am Punkt', async ({ page }) => {
+  await page.goto('/');
+  await page.click('[data-geh="kunden"]');
+  await page.click('[data-akte="beispiel"]');
+  await expect(page.locator('.ring .mitte')).toContainText('2/5');
+  await expect(page.locator('.fp-zeile')).toHaveCount(5);
+  await expect(page.locator('.fp-achse')).toContainText('Erstgespräch 12.08.');
+  await expect(page.locator('.fp-achse')).toContainText('heute');
+  await page.locator('.fp-zeile', { hasText: 'Altersvorsorge' }).locator('.fp-punkt.letzter').hover();
+  await expect(page.locator('#fp-tipp')).toContainText('Vorschlag geschickt');
+  await expect(page.locator('.landing-raster')).toContainText('Seit dem Termin am 02.10.');
+  await expect(page.locator('.offen-gruppe').first()).toContainText('Altersvorsorge');
 });
 
 test('Thema in der Akte vormerken und Stand ändern', async ({ page }) => {

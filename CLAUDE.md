@@ -22,6 +22,11 @@ Stelle. Sprache in App, Code-Kommentaren und Commits: **Deutsch**.
   - Zur Zentrale gehört: Kunden anlegen, eine Akte je Kunde, in der man mit dem Kunden reinschaut (Themen,
     Mitschriften, Verlauf, Aufgaben, Finanzen), Finanzdaten aufnehmen, Mitschriften und ToDos jederzeit pflegen,
     Klar eingebunden (17.10.2026, Rückmeldung zu Entwurf 1: „der gesamte Zentrale-Gedanke ist noch nicht da“).
+  - Entwurf 2: „viel bessere Zentrale“. Im Überblick sehen, wie viel frei im Monat ist, die offenen Themen, den
+    Verlauf (17.10.2026).
+  - Der Überblick ist die Landingpage je Kunde, mit der man im Termin nachvollzieht, was offen ist und was passiert
+    ist; dort ein Blickfang, der die Themen zeigt (17.10.2026).
+  - Alles andere klein und dicht: wo man nur sehen muss, was ansteht, nehmen Elemente wenig Platz ein (17.10.2026).
 - **Nicht gewollt:**
   - Eine zweite Aufgabenliste neben Klar.
   - Das Aussehen am Finanzakte-Screenshot ausrichten (17.10.2026: „ganz neu, Design soll das Ziel unterstützen,
@@ -44,7 +49,13 @@ Stelle. Sprache in App, Code-Kommentaren und Commits: **Deutsch**.
   Änderungen landen im Verlauf), Termine (je Termin Mitschrift, jederzeit bearbeitbar, Status, Ergebnis), Aufgaben
   (die Klar-Aufgabe des Kunden, abhaken, eigene Punkte dazu), Verlauf. „Mit … ansehen“ zeigt nur Überblick,
   Finanzen und Verlauf. Nachbereiten startet am Termin. Im Tab gespeichert (sessionStorage), Klar gespielt.
-  Wartet auf Lukas.
+  Rückmeldung: viel besser; Landingpage je Kunde für den Termin, Elemente kleiner, im Überblick ein Blickfang.
+- Entwurf 3 (17.10.2026, gleicher Link): alle Maße kleiner (siehe Regeln). Überblick = Landingpage: oben Ring
+  (Themen nach Stand, „2/5 erledigt“) und **Fahrplan** (je Thema eine Spur über die Zeit, Punkte = Schritte im
+  Faden, Termine als gestrichelte Linien, heute in Flieder, offene Themen gestrichelt bis heute bzw. bis zum
+  nächsten Termin, Text am Punkt beim Darüberfahren). Darunter „Seit dem Termin am …“ (was besprochen wurde und was
+  seitdem passiert ist), „Offen“ (bei mir, beim Kunden, nächstes Mal), als Nächstes/frei im Monat/in Klar, dann alle
+  Themen als dichte Liste. Wartet auf Lukas.
 
 ## Aufbau
 - `index.html` – die ganze App. Erstes Script `<script id="kern">`: Daten (Kunde mit `themen`, `termine`, `finanzen`,
@@ -53,7 +64,8 @@ Stelle. Sprache in App, Code-Kommentaren und Commits: **Deutsch**.
   (Zustand `S`, `render()`, `go(seite)`). CSS in einem `<style>`-Block (Tokens → Grundlagen → Bausteine → Bereiche).
   Look nach Skill `app-ui`, Schrift Geist über Google Fonts.
 - `scripts/` – `serve.mjs` (:5190), `check.mjs`, `artefakt.mjs <ziel>` (Fassung fürs Claude-Artifact).
-- `test/` – `kern.spec.js`, `app.spec.js` (Rundgang Nachbereiten, Enter, Umstellen, Kundensicht, Abhaken, Handy, hell/dunkel).
+- `test/` – `kern.spec.js`, `app.spec.js` (Heute, Kunde anlegen, Finanzen, Termin, Nachbereiten, Landingpage mit
+  Ring und Fahrplan, Kundensicht, Abhaken, Neuladen, Handy, hell/dunkel, keine doppelten IDs).
 
 ## Befehle
 - `npm test` – Fehlercheck + alle Tests, vor jedem Commit grün. Cloud-Sitzung: `PW_CHROMIUM=/opt/pw-browsers/chromium npm test`.
@@ -63,7 +75,9 @@ Stelle. Sprache in App, Code-Kommentaren und Commits: **Deutsch**.
 ## Regeln
 - Repo **öffentlich**: keine Kundennamen, Mitschriften, Beträge. Testdaten erfunden (Lea Muster, Jonas und Mira
   Beispiel, Tom Probe, Sven Testmann). `check.mjs` lehnt Dokumente und Schlüssel ab.
-- Kein Titelbalken oben links. Umschalter Kunden/Aufgaben oben in der Mitte.
+- Kein Titelbalken oben links. Umschalter Heute/Kunden/Aufgaben oben in der Mitte.
+- Dicht (Lukas, 17.10.2026): Text 14 px, Karten Radius 16/Innenabstand 16, Felder 38 px (Handy 16 px Schrift),
+  Knöpfe 36, Chips 30, Pillen 22, Listenzeilen 10 px, Titel 24–26 px. Platz bekommt nur der Blickfang im Überblick.
 - Stand eines Themas immer mit Wort, nie nur Farbe: bei mir = Flieder voll, beim Kunden = Flieder schraffiert,
   nächstes Mal = grau, erledigt = grün.
 - Aufgaben nach den Klar-Regeln: eine Aufgabe je Kunde (`@Name`), Unterpunkte konkret, „Termin vereinbaren“ und
