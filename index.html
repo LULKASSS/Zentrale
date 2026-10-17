@@ -94,7 +94,7 @@ p { margin:0; }
 
 /* ============ Bausteine ============ */
 .karte { background:var(--surface); border-radius:var(--r); box-shadow:var(--shadow); padding:16px; }
-.karte > h2, .karte-kopf h2 { font-size:13px; font-weight:600; color:var(--fg-2); }
+.karte > h2:not(.fin-frage), .karte-kopf h2 { font-size:13px; font-weight:600; color:var(--fg-2); }
 .karte > h2 { margin-bottom:10px; }
 .karte-kopf { display:flex; align-items:baseline; justify-content:space-between; gap:12px; margin-bottom:10px; }
 
@@ -190,13 +190,17 @@ textarea.feld { resize:vertical; line-height:1.55; }
 /* Finanzbalken: ein Monat Einkommen, aufgeteilt in Töpfe */
 .balken { display:flex; gap:2px; height:34px; border-radius:10px; overflow:hidden; background:var(--surface-2); }
 .balken.klein { height:8px; border-radius:4px; gap:2px; }
+.balken.gross { height:48px; border-radius:12px; }
+.balken.leer { display:grid; place-items:center; background:transparent; border:1.5px dashed var(--line-2); color:var(--fg-3); font-size:13px; }
+.balken i.still { opacity:.35; }
+.balken i[data-t="ein"] { background:var(--accent-soft); color:var(--accent-ink); }
 .balken i { display:flex; align-items:center; padding:0 10px; font-style:normal; font-size:12.5px; font-weight:600; white-space:nowrap; overflow:hidden; min-width:0; transition:flex-grow .6s var(--ease); }
 .balken.klein i { padding:0; }
 .balken i[data-t="fix"] { background:var(--topf-fix); color:var(--topf-fix-ink); }
 .balken i[data-t="vers"] { background:var(--topf-vers); color:var(--topf-vers-ink); }
 .balken i[data-t="leben"] { background:var(--topf-leben); color:var(--topf-leben-ink); }
 .balken i[data-t="spar"] { background:var(--topf-spar); color:var(--topf-spar-ink); }
-.balken i[data-t="frei"] { background:transparent; color:var(--fg-2); }
+.balken i[data-t="frei"] { background:repeating-linear-gradient(135deg, var(--surface-3) 0 2px, transparent 2px 7px); color:var(--fg-2); }
 .balken i[data-t="fehlt"] { background:repeating-linear-gradient(135deg, var(--gap-soft) 0 6px, transparent 6px 12px); color:var(--gap-ink); }
 .topf-punkt { width:10px; height:10px; border-radius:3px; display:inline-block; flex:none; }
 .topf-punkt[data-t="ein"] { background:var(--fg-2); }
@@ -385,19 +389,48 @@ button.lzeile:hover { background:var(--surface-2); }
 .offen-gruppe + .offen-gruppe { margin-top:10px; }
 .klein { font-size:12.5px; }
 
-/* Finanzen */
-.fin-kopf { display:flex; flex-wrap:wrap; align-items:flex-end; justify-content:space-between; gap:12px 24px; margin-bottom:16px; }
-.fin-kopf .rein { color:var(--fg-3); font-size:13px; }
-.fin-kopf .rein b { color:var(--fg); font-size:18px; font-weight:600; display:block; }
-.fin-gruppen { display:grid; grid-template-columns:repeat(3, minmax(0, 1fr)); gap:12px; margin-top:12px; align-items:start; }
-.fin-gruppe .karte-kopf h2 { display:flex; align-items:center; gap:8px; }
-.fin-gruppe .summe { font-weight:600; font-size:13.5px; }
-.posten { display:grid; grid-template-columns:minmax(0, 1fr) 92px 22px; gap:6px; align-items:center; margin-bottom:6px; }
-.posten .feld { min-height:32px; padding:5px 10px; font-size:13.5px; }
-.posten .betrag .feld { padding-right:24px; }
-.betrag::after { right:10px; font-size:12.5px; }
-.posten .weg { border:none; background:none; color:var(--fg-3); width:22px; height:22px; border-radius:50%; font-size:16px; line-height:1; padding:0; }
-.posten .weg:hover { background:var(--surface-2); color:var(--fg); }
+/* Finanzen: Aufnahme als Geschichte */
+.fin-start { max-width:640px; display:flex; flex-direction:column; align-items:flex-start; gap:8px; }
+.fin-start h2 { font-size:20px; color:var(--fg); }
+.fin-schritte { display:flex; gap:4px; overflow-x:auto; margin:0 -4px 12px; padding:2px 4px; scrollbar-width:none; }
+.fin-schritte::-webkit-scrollbar { display:none; }
+.fin-schritte button { flex:none; border:none; background:none; height:30px; padding:0 12px; border-radius:999px; font-size:13px; color:var(--fg-3); display:inline-flex; align-items:center; gap:6px; }
+.fin-schritte button[aria-current="step"] { background:var(--surface); color:var(--fg); box-shadow:var(--shadow); font-weight:600; }
+.fin-schritte .ok { width:15px; height:15px; border-radius:50%; background:var(--ok-soft); display:grid; place-items:center; }
+.fin-schritte .ok svg { width:9px; height:9px; stroke:var(--ok); stroke-width:2.8; fill:none; }
+.fin-oben { position:sticky; top:calc(56px + env(safe-area-inset-top, 0px)); z-index:5; margin-bottom:12px; }
+.fin-kopf { display:flex; justify-content:space-between; align-items:flex-end; gap:12px; margin-bottom:12px; }
+.fin-rein { display:block; font-size:18px; font-weight:600; }
+.fin-frei-block { text-align:right; }
+.fin-frei-block .leise { font-size:12.5px; }
+.fin-frage { font-size:22px; font-weight:600; color:var(--fg); margin-bottom:14px; letter-spacing:-.015em; }
+.fin-unter { margin:-8px 0 14px; }
+.fin-pillen { display:grid; grid-template-columns:repeat(auto-fill, minmax(160px, 1fr)); gap:8px; margin-bottom:14px; }
+.fpille { height:62px; border:1.5px solid transparent; border-radius:14px; background:var(--surface-2); padding:9px 12px; text-align:left; display:flex; flex-direction:column; justify-content:space-between; min-width:0; position:relative; transition:background .2s, border-color .2s, transform .12s var(--ease), box-shadow .2s; }
+.fpille:active { transform:scale(.97); }
+.fp-name { font-size:12.5px; color:var(--fg-2); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+.fp-betrag { font-size:17px; font-weight:600; letter-spacing:-.01em; white-space:nowrap; }
+.fp-betrag .leise { font-size:13px; font-weight:500; }
+.fpille.vorschlag, .fpille.neu { background:transparent; border:1.5px dashed var(--line-2); }
+.fpille.vorschlag .fp-betrag, .fpille.neu .fp-betrag { font-size:13px; font-weight:500; color:var(--fg-3); }
+.fpille.offen { background:var(--surface); border-color:var(--accent); box-shadow:0 0 0 4px var(--accent-soft); }
+.fpille.offen input { border:none; background:none; padding:0; min-width:0; width:100%; outline:none; }
+.fp-name-feld { font-size:12.5px; color:var(--fg-2); padding-right:22px !important; }
+.fp-betrag-zeile { display:flex; align-items:baseline; gap:4px; font-size:17px; font-weight:600; }
+.fp-betrag-feld { font-size:17px; font-weight:600; }
+.fp-betrag-zeile span { color:var(--fg-3); font-weight:500; }
+.fp-weg { position:absolute; top:5px; right:5px; border:none; background:none; width:22px; height:22px; border-radius:50%; color:var(--fg-3); font-size:16px; line-height:1; padding:0; }
+.fp-weg:hover { background:var(--surface-2); color:var(--fg); }
+.fin-summe { color:var(--fg-3); font-size:13px; }
+.fin-summe b { color:var(--fg); font-weight:600; }
+.puls { animation:puls 1.1s var(--ease) 2; }
+@keyframes puls { 50% { box-shadow:0 0 0 7px var(--accent-soft); } }
+.fin-kacheln { display:grid; grid-template-columns:repeat(5, minmax(0, 1fr)); gap:8px; margin-top:14px; }
+.fin-kachel { height:62px; border:none; border-radius:14px; background:var(--surface-2); padding:9px 12px; text-align:left; display:flex; flex-direction:column; justify-content:space-between; min-width:0; transition:transform .12s var(--ease); }
+.fin-kachel:not([disabled]):active { transform:scale(.97); }
+.fin-kachel .kn { font-size:12.5px; color:var(--fg-2); display:flex; align-items:center; gap:6px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+.fin-kachel b { font-size:17px; font-weight:600; letter-spacing:-.01em; }
+.fin-fuss { margin-top:12px; }
 .fin-stand { color:var(--fg-3); font-size:12px; }
 
 /* Termine und Mitschrift */
@@ -558,7 +591,7 @@ html[data-blatt] body { overflow:hidden; }
 /* ============ Handy ============ */
 @media (max-width: 860px) {
   .raster, .ergebnis, .landing-raster { grid-template-columns:minmax(0, 1fr); }
-  .fin-gruppen { grid-template-columns:repeat(2, minmax(0, 1fr)); }
+  .fin-kacheln { grid-template-columns:repeat(3, minmax(0, 1fr)); }
   .raster > .seitenspalte { order:-1; }
   .themen-held { grid-template-columns:minmax(0, 1fr); }
 }
@@ -569,7 +602,11 @@ html[data-blatt] body { overflow:hidden; }
   .umschalter button { padding:0 12px; }
   .feld { font-size:16px; }
   .karte, .frage-innen { padding:14px; }
-  .fin-gruppen { grid-template-columns:minmax(0, 1fr); }
+  .fin-kacheln { grid-template-columns:repeat(2, minmax(0, 1fr)); }
+  .fin-pillen { grid-template-columns:repeat(2, minmax(0, 1fr)); }
+  .fin-frage { font-size:19px; }
+  .balken.gross { height:40px; }
+  .fin-oben { top:calc(52px + env(safe-area-inset-top, 0px)); }
   .lzeile { grid-template-columns:minmax(0, 1fr); padding:10px 14px; }
   .thema-kopf { grid-template-columns:minmax(0, 1fr) auto; gap:2px 10px; padding:9px 14px; }
   .thema-kopf .twas { grid-column:1; grid-row:2; white-space:normal; }
@@ -588,7 +625,6 @@ html[data-blatt] body { overflow:hidden; }
   .breit-mobil, .uebernehmen-leiste .knopf, .kundensicht-schalter { width:100%; }
   .akte-kopf .aktionen { width:100%; }
   .formular { grid-template-columns:minmax(0, 1fr); }
-  .posten { grid-template-columns:minmax(0, 1fr) 104px 22px; }
   .grosse-zahl { font-size:32px; }
   }
 </style>
@@ -634,13 +670,16 @@ var TAETIGKEITEN = ["Angestellt", "Selbstständig", "Beamtet", "In Ausbildung", 
 /* Finanzen: Einnahmen minus vier Töpfe = frei im Monat. Vermögen getrennt. */
 var GRUPPEN = [
   { id: "ein",   name: "Einnahmen",           vorschlaege: ["Gehalt", "Gewinn", "Kindergeld", "Nebenjob", "Miete erhalten"] },
-  { id: "fix",   name: "Wohnen und Verträge", vorschlaege: ["Miete", "Nebenkosten", "Strom", "Internet", "Handy", "Rundfunkbeitrag", "Kita", "Kreditrate"] },
+  { id: "fix",   name: "Wohnen und Verträge", vorschlaege: ["Miete", "Nebenkosten", "Strom", "Internet", "Handy", "Rundfunkbeitrag", "Deutschland-Ticket", "Kita", "Kreditrate"] },
   { id: "vers",  name: "Versicherungen",      vorschlaege: ["Krankenversicherung", "Haftpflicht", "Hausrat", "Kfz", "BU", "Rechtsschutz"] },
   { id: "leben", name: "Leben",               vorschlaege: ["Lebensmittel", "Tanken", "Freizeit", "Kleidung", "Abos", "Urlaub"] },
   { id: "spar",  name: "Sparen und Vorsorge", vorschlaege: ["ETF-Sparplan", "Altersvorsorge", "VL", "Sparrate Tagesgeld"] },
   { id: "verm",  name: "Vermögen",            vorschlaege: ["Tagesgeld", "Girokonto", "Depot", "Bausparvertrag"] }
 ];
 var TOEPFE = ["fix", "vers", "leben", "spar"];
+/* Amtliche Beträge aus der Finanzakte (Stand 2026, zum Jahreswechsel prüfen): Rundfunkbeitrag laut rundfunkbeitrag.de,
+   Kindergeld je Kind seit 01.01.2026 laut Familienkasse, Deutschland-Ticket bis 31.12.2026 laut bahn.de. */
+var AMTLICH = { "Rundfunkbeitrag": 18.36, "Kindergeld": 259, "Deutschland-Ticket": 63 };
 
 /* Beispiel-Abläufe. Später liest die Zentrale sie aus dem Wiki (wiki/aktuell). */
 var WIKI = {
@@ -1243,7 +1282,7 @@ if (ZIEL) { HEUTE = (function (d) { return d.getFullYear() + "-" + (d.getMonth()
 var S = ZIEL ? { kunden: [], aufgaben: [] } : (laden() || beispielStand());
 S.seite = "heute"; S.kunde = null; S.reiter = "ueberblick"; S.termin = null; S.kundensicht = false;
 S.offen = {}; S.neu = null; S.nb = null; S.blatt = null; S.terminForm = false; S.suche = "";
-S.fhZiel = {}; S.fhText = {}; S.warteWahl = null;
+S.fhZiel = {}; S.fhText = {}; S.warteWahl = null; S.finModus = null; S.finSchritt = 0; S.finOffen = null;
 
 /* Im Entwurf nur im Tab (sessionStorage), damit Ausprobiertes ein Neuladen übersteht. */
 function laden() {
@@ -1273,7 +1312,7 @@ function ohneWartet(t) { return t.replace(/^Wartet auf [^:]+:\s*/, ""); }
 function go(seite, opt) {
   opt = opt || {};
   S.seite = seite;
-  if (opt.kunde !== undefined) { S.kunde = opt.kunde; }
+  if (opt.kunde !== undefined && opt.kunde !== S.kunde) { S.kunde = opt.kunde; S.finModus = null; S.finOffen = null; }
   if (opt.reiter) { S.reiter = opt.reiter; }
   if (opt.termin !== undefined) { S.termin = opt.termin; }
   if (seite !== "akte") { S.kundensicht = false; }
@@ -1661,7 +1700,26 @@ function themaZeile(k, th, ks) {
   return t.join("");
 }
 
-var TOPF_NAME = { fix: "Verträge", vers: "Versicherungen", leben: "Leben", spar: "Sparen", frei: "frei", fehlt: "fehlt" };
+/* ---------- Finanzen: Aufnahme als Geschichte ----------
+   Sechs Kapitel nacheinander (rein, Wohnen und Verträge, Versicherungen, Leben, Sparen, was schon da ist), oben der
+   Monat als Balken, der sich Posten für Posten füllt, daneben „frei“, das beim Verteilen schrumpft. Alle Pillen
+   gleich groß; Zahlen nur, wo sie gerade gebraucht werden. Am Ende „So sieht der Monat aus“. */
+var KAPITEL = [
+  { g: "ein",   kurz: "Rein",           frage: "Was kommt im Monat rein?" },
+  { g: "fix",   kurz: "Wohnen",         frage: "Was geht für Wohnen und Verträge weg?" },
+  { g: "vers",  kurz: "Versicherungen", frage: "Welche Versicherungen laufen?" },
+  { g: "leben", kurz: "Leben",          frage: "Was braucht es zum Leben?" },
+  { g: "spar",  kurz: "Sparen",         frage: "Was wird schon gespart?" },
+  { g: "verm",  kurz: "Vermögen",       frage: "Was ist schon da?", unter: "Stand heute, kein Monatsbetrag." }
+];
+var TOPF_LANG = { fix: "Wohnen und Verträge", vers: "Versicherungen", leben: "Leben", spar: "Sparen und Vorsorge", verm: "Vermögen" };
+var TOPF_NAME = { fix: "Wohnen", vers: "Versicherungen", leben: "Leben", spar: "Sparen", frei: "frei", fehlt: "fehlt" };
+var OK_SVG = '<svg viewBox="0 0 14 14" aria-hidden="true"><path d="M2.5 7.4l2.9 2.9 6-6.4"/></svg>';
+
+function freiText(s) { return (s.frei < 0 ? "−" : "") + esc(zahlText(Math.abs(Math.round(s.frei * 100) / 100))) + "<small>€</small>"; }
+function zahlGross(n) { return (n < 0 ? "−" : "") + esc(zahlText(Math.abs(Math.round(n)))) + "<small>€</small>"; }
+
+/* Kleiner Balken (Landingpage): Töpfe und frei. */
 function balkenHtml(s, klein) {
   var basis = s.frei < 0 ? s.aus : s.ein;
   var kl = "balken" + (klein ? " klein" : "");
@@ -1669,56 +1727,158 @@ function balkenHtml(s, klein) {
   var teile = TOEPFE.filter(function (g) { return s[g] > 0; }).map(function (g) { return [g, s[g]]; });
   if (s.frei > 0) { teile.push(["frei", s.frei]); }
   return '<div class="' + kl + '" role="img" aria-label="Aufteilung des Einkommens">' + teile.map(function (x) {
-    var anteil = x[1] / basis;
-    return '<i data-t="' + x[0] + '" style="flex-grow:' + x[1] + '" title="' + TOPF_NAME[x[0]] + " " + euro(x[1]) + '">' + (!klein && anteil > 0.13 ? TOPF_NAME[x[0]] : "") + "</i>";
+    return '<i data-t="' + x[0] + '" style="flex-grow:' + x[1] + '" title="' + TOPF_NAME[x[0]] + " " + euro(x[1]) + '">' + (!klein && x[1] / basis > 0.13 ? TOPF_NAME[x[0]] : "") + "</i>";
   }).join("") + "</div>";
 }
 
-function freiText(s) { return (s.frei < 0 ? "−" : "") + esc(zahlText(Math.abs(Math.round(s.frei * 100) / 100))) + "<small>€</small>"; }
-
-function reiterFinanzen(k) {
-  var t = [];
-  if (!k.finanzen) {
-    t.push('<div class="karte" style="max-width:640px"><h2 style="font-size:20px;margin-bottom:6px">Finanzen aufnehmen</h2><p class="leise" style="margin-bottom:16px">Einnahmen, feste Kosten, Versicherungen, Leben, Sparen und Vermögen. Ein Posten je Zeile.</p>' +
-      '<button type="button" class="knopf akzent" id="finanzen-start">Aufnahme beginnen</button></div>');
-    return t.join("");
+/* Großer Balken der Aufnahme: im aktuellen Kapitel zeigt sein Topf die einzelnen Posten, die anderen je ein Stück. */
+function balkenGross(k, s, aktiv) {
+  var posten = k.finanzen.posten;
+  if (aktiv === "ein") {
+    var rein = posten.filter(function (p) { return p.gruppe === "ein" && p.betrag > 0; });
+    if (!rein.length) { return '<div class="balken gross leer">Hier entsteht der Monat</div>'; }
+    return '<div class="balken gross" role="img" aria-label="Einnahmen">' + rein.map(function (p) {
+      return '<i data-t="ein" style="flex-grow:' + p.betrag + '" title="' + esc(p.name + " " + euro(p.betrag)) + '">' + (p.betrag / s.ein > 0.14 ? esc(p.name) : "") + "</i>";
+    }).join("") + "</div>";
   }
-  var s = finanzSummen(k.finanzen);
-  t.push('<div class="karte"><div class="fin-kopf"><div class="rein">Rein im Monat<b id="fin-ein">' + esc(euro(s.ein)) + '</b></div><div style="text-align:right"><div class="grosse-zahl' + (s.frei < 0 ? " minus" : "") + '" id="fin-frei">' + freiText(s) +
-    '</div><span class="leise" id="fin-frei-wort">' + (s.frei < 0 ? "fehlen im Monat" : "frei im Monat") + '</span></div></div><div id="balken-platz">' + balkenHtml(s, false) + '</div><p class="fin-stand" id="fin-stand" style="margin-top:10px">Stand ' + datum(k.finanzen.stand) + "</p></div>");
-  t.push('<div class="fin-gruppen">');
-  GRUPPEN.forEach(function (g) {
-    var posten = k.finanzen.posten.filter(function (p) { return p.gruppe === g.id; });
-    t.push('<section class="karte fin-gruppe"><div class="karte-kopf"><h2><span class="topf-punkt" data-t="' + g.id + '"></span>' + esc(g.name) + '</h2><span class="summe" id="summe-' + g.id + '">' + esc(euro(s[g.id])) + "</span></div>");
-    posten.forEach(function (p) {
-      t.push('<div class="posten"><input class="feld" data-posten-name="' + p.id + '" value="' + esc(p.name) + '" aria-label="Bezeichnung" autocomplete="off" placeholder="Bezeichnung">' +
-        '<span class="betrag"><input class="feld" data-posten-betrag="' + p.id + '" value="' + esc(betragText(p.betrag)) + '" inputmode="decimal" aria-label="Betrag ' + esc(p.name) + '" autocomplete="off" placeholder="0"></span>' +
-        '<button type="button" class="weg" data-posten-weg="' + p.id + '" aria-label="' + esc(p.name || "Posten") + ' entfernen">×</button></div>');
-    });
-    var namen = posten.map(function (p) { return p.name; });
-    t.push('<div class="chips" style="margin-top:4px">' + g.vorschlaege.filter(function (v) { return namen.indexOf(v) < 0; }).slice(0, 4).map(function (v) {
-      return '<button type="button" class="chip plus" data-posten-dazu="' + g.id + "|" + esc(v) + '">+ ' + esc(v) + "</button>";
-    }).join("") + '<button type="button" class="chip plus" data-posten-dazu="' + g.id + '|">+ Eigener</button></div></section>');
+  var basis = Math.max(s.ein, s.aus);
+  if (!basis) { return '<div class="balken gross leer">Erst die Einnahmen</div>'; }
+  var t = [];
+  TOEPFE.forEach(function (g) {
+    if (!(s[g] > 0)) { return; }
+    if (g === aktiv) {
+      posten.filter(function (p) { return p.gruppe === g && p.betrag > 0; }).forEach(function (p) {
+        t.push('<i data-t="' + g + '" class="teil" style="flex-grow:' + p.betrag + '" title="' + esc(p.name + " " + euro(p.betrag)) + '">' + (p.betrag / basis > 0.1 ? esc(p.name) : "") + "</i>");
+      });
+    } else {
+      t.push('<i data-t="' + g + '"' + (aktiv && aktiv !== "verm" ? ' class="still"' : "") + ' style="flex-grow:' + s[g] + '" title="' + TOPF_NAME[g] + " " + euro(s[g]) + '">' + (s[g] / basis > 0.12 ? TOPF_NAME[g] : "") + "</i>");
+    }
   });
-  t.push("</div>");
+  if (s.frei > 0) { t.push('<i data-t="frei" style="flex-grow:' + s.frei + '">' + (s.frei / basis > 0.1 ? "frei" : "") + "</i>"); }
+  if (s.frei < 0) { t.push('<i data-t="fehlt" style="flex-grow:' + (-s.frei) + '">' + (-s.frei / basis > 0.1 ? "fehlt" : "") + "</i>"); }
+  return '<div class="balken gross" role="img" aria-label="Aufteilung des Einkommens">' + t.join("") + "</div>";
+}
+
+function finanzKopf(k, s, aktiv) {
+  var rein = aktiv === "ein";
+  return '<div class="fin-kopf"><div><span class="beschriftung">' + (rein ? "Kapitel 1 von 6" : "Rein im Monat") + "</span>" + (rein ? "" : '<b class="fin-rein">' + esc(euro(s.ein)) + "</b>") + "</div>" +
+    '<div class="fin-frei-block"><div class="grosse-zahl' + (!rein && s.frei < 0 ? " minus" : "") + '" id="fin-zahl" data-wert="' + (rein ? s.ein : s.frei) + '">' + zahlGross(rein ? s.ein : s.frei) + "</div>" +
+    '<span class="leise" id="fin-zahl-wort">' + (rein ? "rein im Monat" : s.frei < 0 ? "fehlen im Monat" : "frei im Monat") + "</span></div></div>";
+}
+
+function reiterFinanzen(k, ks) {
+  if (!k.finanzen) {
+    if (ks) { return '<p class="leer">Noch keine Finanzen aufgenommen.</p>'; }
+    return '<div class="karte fin-start"><h2>Finanzen von ' + esc(k.vorname) + ' aufnehmen</h2><p class="leise">Sechs kurze Fragen. Der Balken zeigt dabei, wohin das Geld im Monat geht.</p>' +
+      '<button type="button" class="knopf akzent" id="finanzen-start">Los geht’s</button></div>';
+  }
+  if (S.finModus === "aufnahme" && !ks) { return finanzAufnahme(k); }
+  return finanzBild(k, ks, false);
+}
+
+/* Das Ergebnis: eine große Zahl, der Balken, je Topf eine gleich große Kachel. */
+function finanzBild(k, ks, ergebnis) {
+  var s = finanzSummen(k.finanzen), t = [];
+  t.push('<section class="karte fin-bild">' + (ergebnis ? '<h2 class="fin-frage">So sieht der Monat aus</h2>' : "") + finanzKopf(k, s, null) + '<div id="balken-platz">' + balkenGross(k, s, null) + "</div>");
+  t.push('<div class="fin-kacheln">' + ["fix", "vers", "leben", "spar", "verm"].map(function (g) {
+    var i = KAPITEL.map(function (c) { return c.g; }).indexOf(g);
+    return '<button type="button" class="fin-kachel"' + (ks ? " disabled" : ' data-fin-kapitel="' + i + '"') + '><span class="kn"><i class="topf-punkt" data-t="' + g + '"></i>' + TOPF_LANG[g] + "</span><b>" + esc(euro(s[g])) + "</b></button>";
+  }).join("") + "</div>");
+  t.push('<div class="zeile-knoepfe fin-fuss"><span class="fin-stand">Stand ' + datum(k.finanzen.stand) + "</span>" +
+    (ks ? "" : ergebnis ? '<button type="button" class="knopf akzent rechts" id="fin-fertig">Fertig</button>' : '<button type="button" class="knopf still klein rechts" data-fin-kapitel="0">Aufnahme bearbeiten</button>') + "</div></section>");
   return t.join("");
+}
+
+function finanzAufnahme(k) {
+  var i = S.finSchritt, t = [];
+  t.push('<div class="fin-schritte" role="tablist" aria-label="Kapitel der Aufnahme">' + KAPITEL.concat([{ kurz: "Ergebnis" }]).map(function (c, j) {
+    var hat = c.g && k.finanzen.posten.some(function (p) { return p.gruppe === c.g && p.betrag > 0; });
+    return '<button type="button" role="tab" data-fin-kapitel="' + j + '" aria-current="' + (i === j ? "step" : "false") + '">' + (hat ? '<span class="ok">' + OK_SVG + "</span>" : "") + c.kurz + "</button>";
+  }).join("") + "</div>");
+  if (i >= KAPITEL.length) { return t.join("") + finanzBild(k, false, true); }
+  var c = KAPITEL[i], s = finanzSummen(k.finanzen), g = c.g;
+  t.push('<section class="karte fin-oben">' + finanzKopf(k, s, g) + '<div id="balken-platz">' + balkenGross(k, s, g) + "</div></section>");
+  var posten = k.finanzen.posten.filter(function (p) { return p.gruppe === g; });
+  var namen = posten.map(function (p) { return p.name; });
+  var gruppe = GRUPPEN.filter(function (x) { return x.id === g; })[0];
+  t.push('<section class="karte fin-kapitel"><h2 class="fin-frage">' + c.frage + "</h2>" + (c.unter ? '<p class="leise klein fin-unter">' + c.unter + "</p>" : "") + '<div class="fin-pillen">');
+  posten.forEach(function (p) { t.push(pilleHtml(p)); });
+  gruppe.vorschlaege.filter(function (v) { return namen.indexOf(v) < 0; }).forEach(function (v) {
+    t.push('<button type="button" class="fpille vorschlag" data-fin-dazu="' + g + "|" + esc(v) + '"><span class="fp-name">' + esc(v) + '</span><span class="fp-betrag">' + (AMTLICH[v] ? esc(euro(AMTLICH[v])) + " übernehmen" : "+ dazu") + "</span></button>");
+  });
+  t.push('<button type="button" class="fpille neu" data-fin-neu="' + g + '"><span class="fp-name">Eigener Posten</span><span class="fp-betrag">+ dazu</span></button></div>');
+  var naechstes = KAPITEL[i + 1];
+  t.push('<div class="zeile-knoepfe"><span class="fin-summe">' + (g === "verm" ? "Zusammen" : "Im Monat") + ' <b id="summe-' + g + '">' + esc(euro(s[g])) + "</b></span>" +
+    (i > 0 ? '<button type="button" class="knopf still klein rechts" data-fin-kapitel="' + (i - 1) + '">Zurück</button>' : "") +
+    '<button type="button" class="knopf' + (i > 0 ? "" : " rechts") + '" id="fin-weiter" data-fin-kapitel="' + (i + 1) + '">Weiter: ' + (naechstes ? naechstes.kurz : "Ergebnis") + "</button></div></section>");
+  return t.join("");
+}
+
+/* Pille: zu Name und Betrag, beim Antippen zwei Felder. Immer gleich groß. */
+function pilleHtml(p) {
+  if (S.finOffen === p.id) {
+    return '<div class="fpille offen" data-fp="' + p.id + '"><input class="fp-name-feld" data-posten-name="' + p.id + '" value="' + esc(p.name) + '" placeholder="Bezeichnung" aria-label="Bezeichnung" autocomplete="off">' +
+      '<span class="fp-betrag-zeile"><input class="fp-betrag-feld" data-posten-betrag="' + p.id + '" value="' + esc(betragText(p.betrag)) + '" inputmode="decimal" placeholder="Betrag" aria-label="Betrag ' + esc(p.name) + '" autocomplete="off"><span>€</span></span>' +
+      '<button type="button" class="fp-weg" data-posten-weg="' + p.id + '" aria-label="' + esc(p.name || "Posten") + ' entfernen">×</button></div>';
+  }
+  return '<button type="button" class="fpille" data-fp-auf="' + p.id + '"><span class="fp-name">' + esc(p.name || "Ohne Namen") + '</span><span class="fp-betrag">' + (p.betrag ? esc(euro(p.betrag)) : '<span class="leise">Betrag fehlt</span>') + "</span></button>";
+}
+
+/* Zahl gleitet zum neuen Wert, statt zu springen. */
+function zahlGleiten(el, nach) {
+  var von = +el.dataset.wert || 0, start = null;
+  el.dataset.wert = nach;
+  if (von === nach) { el.innerHTML = zahlGross(nach); return; }
+  function schritt(ts) {
+    if (!start) { start = ts; }
+    var f = Math.min(1, (ts - start) / 500), e = 1 - Math.pow(1 - f, 3);
+    el.innerHTML = zahlGross(von + (nach - von) * e);
+    if (f < 1 && +el.dataset.wert === nach) { requestAnimationFrame(schritt); }
+  }
+  requestAnimationFrame(schritt);
 }
 
 /* Nach einer Eingabe nur Zahlen und Balken nachziehen, damit der Fokus im Feld bleibt. */
 function finanzenNachziehen(k) {
-  var s = finanzSummen(k.finanzen);
-  var frei = document.getElementById("fin-frei");
-  if (frei) { frei.innerHTML = freiText(s); frei.classList.toggle("minus", s.frei < 0); }
-  var fw = document.getElementById("fin-frei-wort"); if (fw) { fw.textContent = s.frei < 0 ? "fehlen im Monat" : "frei im Monat"; }
-  var ein = document.getElementById("fin-ein"); if (ein) { ein.textContent = euro(s.ein); }
+  var s = finanzSummen(k.finanzen), aktiv = S.finModus === "aufnahme" && S.finSchritt < KAPITEL.length ? KAPITEL[S.finSchritt].g : null;
+  var zahl = document.getElementById("fin-zahl");
+  if (zahl) {
+    var rein = aktiv === "ein";
+    zahlGleiten(zahl, rein ? s.ein : s.frei);
+    zahl.classList.toggle("minus", !rein && s.frei < 0);
+    var w = document.getElementById("fin-zahl-wort"); if (w) { w.textContent = rein ? "rein im Monat" : s.frei < 0 ? "fehlen im Monat" : "frei im Monat"; }
+  }
+  var re = app.querySelector(".fin-rein"); if (re) { re.textContent = euro(s.ein); }
   GRUPPEN.forEach(function (g) { var el = document.getElementById("summe-" + g.id); if (el) { el.textContent = euro(s[g.id]); } });
-  var platz = document.getElementById("balken-platz"); if (platz) { platz.innerHTML = balkenHtml(s, false); }
+  var platz = document.getElementById("balken-platz"); if (platz) { platz.innerHTML = balkenGross(k, s, aktiv); }
   k.finanzen.stand = HEUTE;
-  var st = document.getElementById("fin-stand"); if (st) { st.textContent = "Stand " + datum(HEUTE); }
   var v = k.verlauf.filter(function (x) { return x.art === "finanzen" && x.d === HEUTE; })[0];
   if (!v) { v = { id: neueId("v"), d: HEUTE, art: "finanzen", text: "" }; k.verlauf.push(v); }
   v.text = "Finanzen aktualisiert, frei " + euro(s.frei);
   speichern();
+}
+
+/* Offene Pille schließen. Ohne Betrag heißt: gibt es nicht. */
+function pilleSchliessen() {
+  if (!S.finOffen) { return; }
+  var k = kundeVon(S.kunde), id = S.finOffen;
+  S.finOffen = null;
+  if (!k || !k.finanzen) { return; }
+  var p = k.finanzen.posten.filter(function (x) { return x.id === id; })[0];
+  if (p && !p.betrag) { k.finanzen.posten = k.finanzen.posten.filter(function (x) { return x.id !== id; }); }
+  finanzenNachziehen(k);
+}
+function pilleOeffnen(id, feld) {
+  S.finOffen = id; render(false);
+  var f = app.querySelector('[data-posten-' + (feld || "betrag") + '="' + id + '"]');
+  if (f) { f.focus(); if (f.select) { f.select(); } }
+}
+function postenDazu(k, gruppe, name) {
+  var betrag = AMTLICH[name] || 0;
+  var p = { id: neueId("g"), gruppe: gruppe, name: name, betrag: betrag };
+  k.finanzen.posten.push(p);
+  if (betrag && name !== "Kindergeld") { finanzenNachziehen(k); render(false); return; }
+  pilleOeffnen(p.id, name ? "betrag" : "name");
 }
 
 function terminStand(tm) { return tm.status === "nachbereitet" ? standPille("erledigt", "Nachbereitet") : tm.status === "geplant" ? standPille("geplant", "Geplant") : standPille("offen", "Nicht nachbereitet"); }
@@ -2075,15 +2235,8 @@ function toast(text) {
   clearTimeout(toastZeit); toastZeit = setTimeout(function () { el.classList.remove("da"); }, 2600);
 }
 
-function postenDazu(k, gruppe, name) {
-  var p = { id: neueId("g"), gruppe: gruppe, name: name, betrag: 0 };
-  k.finanzen.posten.push(p);
-  render(false);
-  var f = app.querySelector(name ? '[data-posten-betrag="' + p.id + '"]' : '[data-posten-name="' + p.id + '"]');
-  if (f) { f.focus(); }
-}
-
 document.addEventListener("click", function (e) {
+  if (S.finOffen && !e.target.closest(".fpille.offen")) { pilleSchliessen(); if (!e.target.closest("button")) { render(false); } }
   var b = e.target.closest("button"); if (!b) { return; }
   var d = b.dataset;
   if (b.id === "entwurf-knopf") {
@@ -2135,11 +2288,19 @@ document.addEventListener("click", function (e) {
   }
 
   /* Finanzen */
-  if (b.id === "finanzen-start") { kundeVon(S.kunde).finanzen = { stand: HEUTE, posten: [] }; render(false); return; }
-  if (d.postenDazu !== undefined) { var pd = d.postenDazu.split("|"); postenDazu(kundeVon(S.kunde), pd[0], pd.slice(1).join("|")); return; }
+  if (b.id === "finanzen-start") { kundeVon(S.kunde).finanzen = { stand: HEUTE, posten: [] }; S.finModus = "aufnahme"; S.finSchritt = 0; render(false); return; }
+  if (d.finKapitel !== undefined) {
+    S.finModus = "aufnahme"; S.finSchritt = +d.finKapitel; S.reiter = "finanzen"; render(false);
+    var oben = app.querySelector(".reiter-leiste"); if (oben && oben.getBoundingClientRect().top < 0) { oben.scrollIntoView({ block: "start" }); }
+    return;
+  }
+  if (b.id === "fin-fertig") { S.finModus = null; render(false); return; }
+  if (d.fpAuf) { pilleOeffnen(d.fpAuf); return; }
+  if (d.finDazu) { var fd = d.finDazu.split("|"); postenDazu(kundeVon(S.kunde), fd[0], fd.slice(1).join("|")); return; }
+  if (d.finNeu) { postenDazu(kundeVon(S.kunde), d.finNeu, ""); return; }
   if (d.postenWeg) {
     var kw = kundeVon(S.kunde); kw.finanzen.posten = kw.finanzen.posten.filter(function (p) { return p.id !== d.postenWeg; });
-    render(false); finanzenNachziehen(kw); return;
+    S.finOffen = null; finanzenNachziehen(kw); render(false); return;
   }
 
   /* Aufgaben wie in Klar */
@@ -2287,6 +2448,7 @@ document.addEventListener("change", function (e) {
 document.addEventListener("keydown", function (e) {
   var el = e.target, d = el.dataset || {};
   if (e.key === "Escape" && S.blatt) { S.blatt = null; render(false); return; }
+  if (e.key === "Escape" && S.finOffen) { pilleSchliessen(); render(false); return; }
   if (e.key !== "Enter") { return; }
   if (d.fhText && (e.metaKey || e.ctrlKey)) { e.preventDefault(); festhaltenJetzt(d.fhText); return; }
   if (d.neupunkt || d.neupunktKunde) { e.preventDefault(); punktDazu(el); return; }
@@ -2294,10 +2456,15 @@ document.addEventListener("keydown", function (e) {
   if (el.id === "eigenes-thema") { e.preventDefault(); eigenesThema(); return; }
   if (d.was !== undefined) { e.preventDefault(); weiter(2 + +d.was); return; }
   if (d.postenName) { e.preventDefault(); var b = app.querySelector('[data-posten-betrag="' + d.postenName + '"]'); if (b) { b.focus(); b.select(); } return; }
+  /* Enter: nächste Pille ohne Betrag im selben Kapitel. Nie ins nächste Kapitel; dann leuchtet „Weiter“ kurz auf. */
   if (d.postenBetrag) {
     e.preventDefault();
-    var felder = Array.prototype.slice.call(app.querySelectorAll("[data-posten-betrag]"));
-    var n = felder[felder.indexOf(el) + 1]; if (n) { n.focus(); n.select(); } else { el.blur(); }
+    var kk = kundeVon(S.kunde), id = d.postenBetrag, p0 = kk.finanzen.posten.filter(function (x) { return x.id === id; })[0];
+    pilleSchliessen();
+    var naechste = p0 ? kk.finanzen.posten.filter(function (x) { return x.gruppe === p0.gruppe && !x.betrag && x.id !== id; })[0] : null;
+    if (naechste) { pilleOeffnen(naechste.id); return; }
+    render(false);
+    var wb = document.getElementById("fin-weiter"); if (wb) { wb.classList.add("puls"); }
   }
 });
 window.addEventListener("resize", function () { kopf(); app.querySelectorAll(".umschalter").forEach(gleiter); markenOrdnen(); });

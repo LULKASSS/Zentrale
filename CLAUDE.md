@@ -75,6 +75,13 @@ Stelle. Sprache in App, Code-Kommentaren und Commits: **Deutsch**.
   Rückmeldung: „final bauen“, darf auf `main`, GitHub Pages eingestellt, erst nur Testkunden.
 - Echte Fassung (17.10.2026): wie Entwurf 4, dazu Anmeldung mit dem Klar-Konto, Daten im Konto, Aufgaben direkt in
   Klar (siehe „Konto und Klar“).
+  Rückmeldung: sehr cool; Finanzen-Seite passt optisch nicht (Pillen unterschiedlich groß, zu viele Zahlen auf einen
+  Blick), die Aufnahme soll wie eine Geschichte sein.
+- Finanzen als Geschichte (17.10.2026): Aufnahme in sechs Kapiteln (Rein, Wohnen, Versicherungen, Leben, Sparen,
+  Vermögen) plus Ergebnis. Je Kapitel eine große Frage, oben eine große Zahl (im ersten Kapitel „rein“, danach „frei“)
+  und ein Balken, der sich Posten für Posten füllt; das aktuelle Kapitel zeigt seine Posten, die anderen Töpfe sind
+  gedämpft. Alle Pillen gleich groß (Name oben, Betrag unten), Vorschläge gestrichelt, „Eigener Posten“ in Flieder.
+  Ergebnis bzw. Reiter Finanzen: Zahl, Balken, fünf gleich große Kacheln, „Aufnahme bearbeiten“.
 
 ## Aufbau
 - `index.html` – die ganze App. Erstes Script `<script id="kern">`: Daten (Kunde mit `themen`, `termine`, `finanzen`,
@@ -110,6 +117,10 @@ Stelle. Sprache in App, Code-Kommentaren und Commits: **Deutsch**.
   Knöpfe 36, Chips 30, Pillen 22, Listenzeilen 10 px, Titel 24–26 px. Platz bekommt nur der Blickfang im Überblick.
 - Stand eines Themas immer mit Wort, nie nur Farbe: bei mir = Flieder voll, beim Kunden = Flieder schraffiert,
   nächstes Mal = grau, erledigt = grün.
+- Finanzaufnahme wie in der Finanzakte: nichts geht von selbst auf, Enter springt zur nächsten Pille ohne Betrag im
+  selben Kapitel, nie ins nächste (dann leuchtet „Weiter“ auf). Leerer Betrag heißt „gibt es nicht“, die Pille
+  verschwindet. Amtliche Beträge (`AMTLICH`: Rundfunkbeitrag, Kindergeld, Deutschland-Ticket) per Klick
+  „… übernehmen“, zum Jahreswechsel prüfen.
 - Aufgaben nach den Klar-Regeln: eine Aufgabe je Kunde (`@Name`), Unterpunkte konkret, „Termin vereinbaren“ und
   „Termin vorbereiten“ (was, steht in der Notiz). Wartet der Kunde, steht am Punkt `warten {art: "kunde", seit,
   nachgefragt}`; nachfragen wie in Klar nach 3, 7, 14, 21 Tagen.

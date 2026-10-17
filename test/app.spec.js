@@ -40,16 +40,44 @@ test('Kunde anlegen, Finanzen aufnehmen, Termin mit Mitschrift anlegen @mobil', 
 
   await page.click('[data-reiter="finanzen"] >> nth=0');
   await page.click('#finanzen-start');
-  await page.click('[data-posten-dazu="ein|Gehalt"]');
+  await expect(page.locator('.fin-frage')).toHaveText('Was kommt im Monat rein?');
+  await page.click('[data-fin-dazu="ein|Gehalt"]');
   await expect(page.locator('[data-posten-betrag]').first()).toBeFocused();
   await page.keyboard.type('3.000');
-  await page.click('[data-posten-dazu="fix|Miete"]');
+  await expect(page.locator('#fin-zahl-wort')).toHaveText('rein im Monat');
+  await page.keyboard.press('Enter');
+  /* Enter wechselt nie das Kapitel, „Weiter“ leuchtet auf. */
+  await expect(page.locator('.fin-frage')).toHaveText('Was kommt im Monat rein?');
+  await expect(page.locator('#fin-weiter')).toHaveClass(/puls/);
+  await page.click('#fin-weiter');
+  await expect(page.locator('.fin-frage')).toHaveText('Was geht für Wohnen und Verträge weg?');
+  await page.click('[data-fin-dazu="fix|Miete"]');
   await page.keyboard.type('950');
-  await expect(page.locator('#fin-frei')).toContainText('2.050');
-  await page.click('[data-posten-dazu="fix|Strom"]');
+  await expect(page.locator('#fin-zahl')).toContainText('2.050');
+  await expect(page.locator('#fin-zahl-wort')).toHaveText('frei im Monat');
+  await page.keyboard.press('Enter');
+  /* Amtlicher Betrag per Klick, ohne Feld. */
+  await page.click('[data-fin-dazu="fix|Rundfunkbeitrag"]');
+  await expect(page.locator('[data-fp-auf]', { hasText: 'Rundfunkbeitrag' })).toContainText('18,36');
+  /* Leerer Betrag heißt: gibt es nicht. */
+  await page.click('[data-fin-dazu="fix|Internet"]');
+  await page.keyboard.press('Enter');
+  await expect(page.locator('[data-fp-auf]', { hasText: 'Internet' })).toHaveCount(0);
+  await expect(page.locator('[data-fin-dazu="fix|Internet"]')).toHaveCount(1);
+  /* Alle Pillen gleich hoch. */
+  const hoehen = await page.locator('.fin-pillen .fpille').evaluateAll(els => els.map(e => Math.round(e.getBoundingClientRect().height)));
+  expect(new Set(hoehen).size).toBe(1);
+  await page.click('[data-fin-dazu="fix|Strom"]');
   await page.keyboard.type('3000');
-  await expect(page.locator('#fin-frei')).toContainText('−950');
-  await expect(page.locator('#fin-frei-wort')).toHaveText('fehlen im Monat');
+  await expect(page.locator('#fin-zahl')).toContainText('968');
+  await expect(page.locator('#fin-zahl-wort')).toHaveText('fehlen im Monat');
+  await page.keyboard.press('Enter');
+  await page.click('[data-fin-kapitel="6"]');
+  await expect(page.locator('.fin-frage')).toHaveText('So sieht der Monat aus');
+  await expect(page.locator('.fin-kachel')).toHaveCount(5);
+  await page.click('#fin-fertig');
+  await expect(page.locator('#fin-zahl')).toContainText('968');
+  await expect(page.locator('.fin-schritte')).toHaveCount(0);
 
   await page.click('#neuer-termin');
   await page.click('#nt-anlegen');
@@ -59,7 +87,7 @@ test('Kunde anlegen, Finanzen aufnehmen, Termin mit Mitschrift anlegen @mobil', 
   await page.click('.zurueck');
   await expect(page.locator('.termin-karte')).toContainText('Haftpflicht fehlt');
   await page.click('[data-reiter="verlauf"]');
-  await expect(page.locator('.verlauf')).toContainText('Finanzen aktualisiert, frei −950 €');
+  await expect(page.locator('.verlauf')).toContainText('Finanzen aktualisiert, frei −968,36 €');
   expect(fehler).toEqual([]);
 });
 
