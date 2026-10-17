@@ -1,0 +1,1107 @@
+<!doctype html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Zentrale</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600;700&display=swap">
+<style>
+/* Aufbau: eine Spalte zum Lesen (Kunden, Aufgaben), die Kundenseite mit Themen links und
+   Verlauf rechts, das Nachbereiten als Fragen nacheinander. Tokens nach dem Skill app-ui. */
+
+/* ============ Tokens ============ */
+:root {
+  --bg:#F6F6F8; --surface:#FFFFFF; --surface-2:#EFEFF3; --surface-3:#E6E6EC;
+  --fg:#0B0B0F; --fg-2:#45454F; --fg-3:#6B6B76; --on-accent:#FFFFFF;
+  --line:#E4E4EA; --line-2:#D2D2DA;
+  --accent:#7F5FE8; --accent-ink:#6445CF; --accent-soft:rgba(127,95,232,.14); --accent-line:rgba(127,95,232,.42);
+  --gap:#E5484D; --gap-soft:rgba(229,72,77,.13); --ok:#26925F; --ok-soft:rgba(38,146,95,.12);
+  --gap-ink:#C8353B; --ok-ink:#1E7A4E;
+  --glas:rgba(246,246,248,.78);
+  --shadow:0 0 0 1px rgba(12,12,20,.025),0 1px 2px rgba(12,12,20,.03),0 10px 30px -8px rgba(12,12,20,.08);
+  --sans:"Geist",ui-sans-serif,system-ui,-apple-system,"Segoe UI",sans-serif;
+  --r:20px; --r-s:12px; --ease:cubic-bezier(.22,1,.36,1);
+  --spring:linear(0, .039, .134, .258, .393, .524, .644, .748, .833, .901, .952, .989, 1.013, 1.028, 1.036, 1.038, 1.037, 1.034, 1.029, 1.024, 1.019, 1.014, 1.01, 1.007, 1.004, 1.002, 1.001, 1);
+  /* Stand eines Themas: bei mir = Flieder voll, beim Kunden = Flieder schraffiert,
+     nächstes Mal = grau umrandet, erledigt = grün. Immer mit Wort daneben. */
+  --st-mir:var(--accent); --st-kunde:var(--accent); --st-naechstes:var(--surface-3); --st-erledigt:var(--ok);
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    color-scheme:dark;
+    --bg:#09090B; --surface:#131316; --surface-2:#1B1B20; --surface-3:#24242A;
+    --fg:#EEEEF1; --fg-2:#BDBDC6; --fg-3:#8F8F99; --on-accent:#0B0B0F;
+    --line:#232329; --line-2:#33333B;
+    --accent:#A78BFA; --accent-ink:#C4B5FD; --accent-soft:rgba(167,139,250,.15); --accent-line:rgba(167,139,250,.48);
+    --gap:#F2555A; --gap-soft:rgba(242,85,90,.15); --ok:#3DB67A; --ok-soft:rgba(61,182,122,.14);
+    --gap-ink:#F2555A; --ok-ink:#3DB67A;
+    --glas:rgba(9,9,11,.78);
+    --shadow:0 0 0 1px rgba(255,255,255,.045),0 1px 2px rgba(0,0,0,.3),0 10px 30px -8px rgba(0,0,0,.5);
+  }
+}
+:root[data-theme="dark"] {
+  color-scheme:dark;
+  --bg:#09090B; --surface:#131316; --surface-2:#1B1B20; --surface-3:#24242A;
+  --fg:#EEEEF1; --fg-2:#BDBDC6; --fg-3:#8F8F99; --on-accent:#0B0B0F;
+  --line:#232329; --line-2:#33333B;
+  --accent:#A78BFA; --accent-ink:#C4B5FD; --accent-soft:rgba(167,139,250,.15); --accent-line:rgba(167,139,250,.48);
+  --gap:#F2555A; --gap-soft:rgba(242,85,90,.15); --ok:#3DB67A; --ok-soft:rgba(61,182,122,.14);
+  --gap-ink:#F2555A; --ok-ink:#3DB67A;
+  --glas:rgba(9,9,11,.78);
+  --shadow:0 0 0 1px rgba(255,255,255,.045),0 1px 2px rgba(0,0,0,.3),0 10px 30px -8px rgba(0,0,0,.5);
+}
+
+/* ============ Grundlagen ============ */
+* { box-sizing:border-box; }
+[hidden] { display:none !important; }
+html, body { margin:0; }
+body {
+  background:var(--bg); color:var(--fg); font-family:var(--sans); font-size:15px; line-height:1.5;
+  font-variant-numeric:tabular-nums; -webkit-font-smoothing:antialiased;
+}
+body::before { content:""; position:fixed; inset:0 0 auto; height:env(safe-area-inset-top, 0px); z-index:10; background:var(--glas); }
+button, input, textarea { font:inherit; color:inherit; }
+button { cursor:pointer; -webkit-tap-highlight-color:transparent; }
+h1, h2, h3 { margin:0; font-weight:600; text-wrap:balance; letter-spacing:-.01em; }
+p { margin:0; }
+:focus-visible { outline:2px solid var(--accent); outline-offset:2px; }
+.leise { color:var(--fg-3); }
+.wrap { max-width:1120px; margin:0 auto; padding-left:max(24px, env(safe-area-inset-left, 0px)); padding-right:max(24px, env(safe-area-inset-right, 0px)); }
+
+/* ============ Bausteine ============ */
+.karte { background:var(--surface); border-radius:var(--r); box-shadow:var(--shadow); padding:22px; }
+
+.knopf {
+  display:inline-flex; align-items:center; justify-content:center; gap:8px; height:44px; padding:0 20px;
+  border:none; border-radius:999px; background:var(--fg); color:var(--bg); font-weight:600; font-size:15px;
+  transition:transform .12s var(--ease), opacity .2s;
+}
+.knopf:active { transform:scale(.96); }
+.knopf[disabled] { opacity:.35; cursor:default; transform:none; }
+.knopf.akzent { background:var(--accent); color:var(--on-accent); }
+.knopf.still { background:var(--surface-2); color:var(--fg); font-weight:500; }
+.knopf.klein { height:34px; padding:0 14px; font-size:13.5px; }
+
+.umschalter { display:inline-flex; position:relative; padding:4px; background:var(--surface-2); border-radius:999px; gap:2px; }
+.umschalter button {
+  position:relative; z-index:1; border:none; background:none; height:34px; padding:0 16px; border-radius:999px;
+  color:var(--fg-3); font-weight:500; font-size:14px; white-space:nowrap; display:inline-flex; align-items:center; gap:7px;
+  transition:color .25s;
+}
+.umschalter button[aria-pressed="true"] { color:var(--fg); }
+.umschalter .gleiter {
+  position:absolute; z-index:0; top:4px; bottom:4px; border-radius:999px; background:var(--surface);
+  box-shadow:0 1px 3px rgba(12,12,20,.12); transition:left .45s var(--spring), width .45s var(--spring);
+}
+.zahl-klein { font-size:12px; font-weight:600; min-width:20px; height:20px; padding:0 6px; border-radius:999px; background:var(--accent-soft); color:var(--accent-ink); display:inline-grid; place-items:center; }
+
+/* Stand-Pille: Wort plus Farbe, schraffiert = liegt beim Kunden */
+.stand {
+  display:inline-flex; align-items:center; gap:7px; height:26px; padding:0 11px 0 9px; border-radius:999px;
+  font-size:12.5px; font-weight:500; white-space:nowrap; background:var(--surface-2); color:var(--fg-2);
+}
+.stand::before { content:""; width:10px; height:10px; border-radius:50%; flex:none; }
+.stand[data-st="mir"] { background:var(--accent-soft); color:var(--accent-ink); }
+.stand[data-st="mir"]::before { background:var(--st-mir); }
+.stand[data-st="kunde"] { background:var(--accent-soft); color:var(--accent-ink); }
+.stand[data-st="kunde"]::before { background:repeating-linear-gradient(135deg, var(--st-kunde) 0 2px, transparent 2px 4px); box-shadow:inset 0 0 0 1.5px var(--st-kunde); }
+.stand[data-st="naechstes"]::before { background:var(--st-naechstes); box-shadow:inset 0 0 0 1.5px var(--line-2); }
+.stand[data-st="erledigt"] { background:var(--ok-soft); color:var(--ok-ink); }
+.stand[data-st="erledigt"]::before { background:var(--st-erledigt); }
+
+/* kleines Kästchen je Thema in der Kundenliste */
+.punktreihe { display:flex; gap:4px; flex-wrap:wrap; }
+.punktreihe i { width:14px; height:14px; border-radius:4px; display:block; background:var(--surface-3); box-shadow:inset 0 0 0 1.5px var(--line-2); }
+.punktreihe i[data-st="mir"] { background:var(--st-mir); box-shadow:none; }
+.punktreihe i[data-st="kunde"] { background:repeating-linear-gradient(135deg, var(--st-kunde) 0 2px, transparent 2px 4px); box-shadow:inset 0 0 0 1.5px var(--st-kunde); }
+.punktreihe i[data-st="erledigt"] { background:var(--st-erledigt); box-shadow:none; }
+
+.haken {
+  flex:none; width:24px; height:24px; border-radius:50%; border:1.5px solid var(--line-2); background:var(--surface);
+  display:grid; place-items:center; padding:0; transition:background .25s var(--ease), border-color .25s, transform .12s var(--ease);
+}
+.haken:active { transform:scale(.9); }
+.haken svg { width:13px; height:13px; stroke:var(--on-accent); stroke-width:2.6; fill:none; stroke-dasharray:20; stroke-dashoffset:20; transition:stroke-dashoffset .35s var(--ease) .05s; }
+.haken[aria-checked="true"] { background:var(--accent); border-color:var(--accent); }
+.haken[aria-checked="true"] svg { stroke-dashoffset:0; }
+
+.feld {
+  width:100%; border:none; border-radius:var(--r-s); background:var(--surface-2); padding:11px 14px; font-size:15px;
+  transition:background .2s, box-shadow .2s;
+}
+.feld:focus { outline:none; background:var(--surface); box-shadow:0 0 0 1.5px var(--accent-line), 0 0 0 5px var(--accent-soft); }
+textarea.feld { resize:vertical; line-height:1.55; }
+
+.chip {
+  display:inline-flex; align-items:center; gap:7px; height:36px; padding:0 15px; border:none; border-radius:999px;
+  background:var(--surface-2); color:var(--fg-2); font-size:14px; font-weight:500; transition:background .2s, color .2s, transform .12s var(--ease);
+}
+.chip:active { transform:scale(.96); }
+.chip[aria-pressed="true"] { background:var(--accent); color:var(--on-accent); }
+.chip .herkunft { width:6px; height:6px; border-radius:50%; background:currentColor; opacity:.55; }
+
+.toast {
+  position:fixed; left:50%; bottom:calc(24px + env(safe-area-inset-bottom, 0px)); z-index:30;
+  transform:translate(-50%, 16px); opacity:0; pointer-events:none;
+  background:var(--fg); color:var(--bg); border-radius:999px; padding:11px 20px; font-size:14px; font-weight:500;
+  box-shadow:var(--shadow); transition:opacity .25s, transform .45s var(--spring); max-width:calc(100% - 32px);
+}
+.toast.da { opacity:1; transform:translate(-50%, 0); }
+
+/* ============ Bereiche ============ */
+
+/* Kopf: Glas, Umschalter in der Mitte, kein Titel links */
+.kopf { position:sticky; top:env(safe-area-inset-top, 0px); z-index:20; background:var(--glas); backdrop-filter:saturate(1.4) blur(14px); -webkit-backdrop-filter:saturate(1.4) blur(14px); border-bottom:1px solid var(--line); }
+.kopf .wrap { display:grid; grid-template-columns:1fr auto 1fr; align-items:center; height:60px; }
+.kopf .rechts { justify-self:end; position:relative; }
+.entwurf-knopf { border:none; background:none; color:var(--fg-3); font-size:13px; font-weight:500; height:32px; padding:0 12px; border-radius:999px; }
+.entwurf-knopf:hover { background:var(--surface-2); }
+.entwurf-text {
+  position:absolute; right:0; top:42px; width:min(340px, calc(100vw - 32px)); z-index:25;
+  background:var(--surface); border-radius:var(--r-s); box-shadow:var(--shadow); padding:16px 18px; font-size:13.5px; color:var(--fg-2);
+  display:flex; flex-direction:column; gap:8px;
+}
+.entwurf-text b { color:var(--fg); font-weight:600; }
+
+main { padding-block:28px 96px; }
+.seite { animation:rein .33s var(--ease) both; }
+@keyframes rein { from { opacity:.001; transform:translateY(8px); } }
+
+.zurueck { border:none; background:none; color:var(--fg-3); font-size:14px; padding:0; height:32px; display:inline-flex; align-items:center; gap:6px; }
+.zurueck:hover { color:var(--fg); }
+
+/* --- Kunden --- */
+.kunden { max-width:820px; margin:0 auto; display:flex; flex-direction:column; gap:28px; }
+.ansage { display:flex; flex-direction:column; gap:6px; }
+.ansage h1 { font-size:30px; }
+.nachbereiten-karte { display:flex; align-items:center; gap:18px; background:var(--accent-soft); border-radius:var(--r); padding:18px 18px 18px 22px; }
+.nachbereiten-karte .was { flex:1; min-width:0; }
+.nachbereiten-karte .was b { font-weight:600; display:block; font-size:16px; }
+.nachbereiten-karte .was span { color:var(--fg-2); font-size:14px; }
+.liste { background:var(--surface); border-radius:var(--r); box-shadow:var(--shadow); overflow:hidden; }
+.kzeile {
+  width:100%; display:grid; grid-template-columns:minmax(0, 1fr) auto; gap:6px 18px; align-items:center; text-align:left;
+  border:none; background:none; padding:16px 22px; border-top:1px solid var(--line); transition:background .2s;
+}
+.kzeile:first-child { border-top:none; }
+.kzeile:hover { background:var(--surface-2); }
+.kzeile .name { font-weight:600; font-size:16px; }
+.kzeile .profil { color:var(--fg-3); font-size:13.5px; }
+.kzeile .lage { font-size:13.5px; color:var(--fg-2); text-align:right; }
+.kzeile .lage.draengt { color:var(--gap-ink); }
+.kzeile .rechts-spalte { display:flex; flex-direction:column; gap:6px; align-items:flex-end; }
+.kzeile .punktreihe { justify-content:flex-end; }
+
+/* --- Kundenseite --- */
+.kunde-kopf { display:flex; flex-wrap:wrap; align-items:flex-end; justify-content:space-between; gap:16px 24px; margin:10px 0 26px; }
+.kunde-kopf h1 { font-size:34px; line-height:1.15; }
+.kunde-kopf .profil { color:var(--fg-3); margin-top:4px; }
+.kunde-kopf .aktionen { display:flex; gap:10px; flex-wrap:wrap; align-items:center; }
+.kundensicht-schalter { display:inline-flex; align-items:center; gap:10px; border:none; background:var(--surface-2); border-radius:999px; height:44px; padding:0 16px 0 8px; font-size:14px; font-weight:500; }
+.kundensicht-schalter .bahn { width:40px; height:24px; border-radius:999px; background:var(--surface-3); position:relative; transition:background .3s; }
+.kundensicht-schalter .bahn::after { content:""; position:absolute; top:3px; left:3px; width:18px; height:18px; border-radius:50%; background:var(--surface); box-shadow:0 1px 3px rgba(0,0,0,.2); transition:transform .45s var(--spring); }
+.kundensicht-schalter[aria-pressed="true"] .bahn { background:var(--accent); }
+.kundensicht-schalter[aria-pressed="true"] .bahn::after { transform:translateX(16px); }
+
+.kunde-raster { display:grid; grid-template-columns:minmax(0, 1fr) 320px; gap:24px; align-items:start; }
+.bilanz { display:flex; flex-wrap:wrap; gap:8px; margin-bottom:14px; }
+
+.themen { display:flex; flex-direction:column; gap:10px; }
+.thema { background:var(--surface); border-radius:var(--r); box-shadow:var(--shadow); overflow:hidden; }
+.thema-kopf { width:100%; border:none; background:none; text-align:left; display:grid; grid-template-columns:minmax(0, 1fr) auto; gap:4px 16px; align-items:center; padding:16px 20px; }
+.thema-kopf .tname { font-weight:600; font-size:17px; }
+.thema-kopf .twas { color:var(--fg-2); font-size:14px; grid-column:1; }
+.thema-kopf .stand { grid-row:1 / span 2; grid-column:2; }
+.faden { display:flex; align-items:center; gap:0; padding:0 20px 16px; }
+.faden .k { width:9px; height:9px; border-radius:50%; background:var(--line-2); flex:none; }
+.faden .k.letzter { width:11px; height:11px; }
+.faden .k.letzter[data-st="mir"] { background:var(--st-mir); }
+.faden .k.letzter[data-st="kunde"] { background:var(--surface); box-shadow:inset 0 0 0 2px var(--st-kunde); }
+.faden .k.letzter[data-st="erledigt"] { background:var(--st-erledigt); }
+.faden .s { height:1.5px; flex:1; max-width:56px; background:var(--line-2); }
+.faden .wann { margin-left:12px; color:var(--fg-3); font-size:12.5px; white-space:nowrap; }
+.faden-liste { list-style:none; margin:0; padding:2px 20px 18px 20px; display:flex; flex-direction:column; gap:0; }
+.faden-liste li { display:grid; grid-template-columns:62px 1fr; gap:12px; padding:7px 0; border-top:1px solid var(--line); font-size:14px; }
+.faden-liste li:first-child { border-top:none; }
+.faden-liste .d { color:var(--fg-3); font-size:13px; }
+.faden-liste .intern { color:var(--fg-3); }
+.faden-liste .neu { animation:leuchten 2.4s var(--ease); border-radius:8px; }
+@keyframes leuchten { 0%, 30% { background:var(--accent-soft); } }
+
+.seitenspalte { display:flex; flex-direction:column; gap:16px; }
+.seitenspalte h2 { font-size:15px; margin-bottom:10px; }
+.verlauf { list-style:none; margin:0; padding:0; display:flex; flex-direction:column; }
+.verlauf li { display:grid; grid-template-columns:14px 1fr; gap:12px; position:relative; padding-bottom:14px; }
+.verlauf li::before { content:""; position:absolute; left:6px; top:14px; bottom:0; width:1.5px; background:var(--line); }
+.verlauf li:last-child::before { display:none; }
+.verlauf .p { width:13px; height:13px; border-radius:50%; margin-top:4px; background:var(--surface); box-shadow:inset 0 0 0 2px var(--line-2); }
+.verlauf li[data-art="termin"] .p { background:var(--accent); box-shadow:none; }
+.verlauf .t { font-size:14px; }
+.verlauf .t b { font-weight:600; }
+.verlauf .t small { display:block; color:var(--fg-3); font-size:13px; }
+.verlauf li.neu .t { animation:leuchten 2.4s var(--ease); border-radius:8px; }
+.platzhalter { border:1.5px dashed var(--line-2); border-radius:var(--r); padding:16px 18px; color:var(--fg-3); font-size:13.5px; }
+.platzhalter b { color:var(--fg-2); font-weight:600; display:block; }
+
+/* --- Nachbereiten: Fragen nacheinander --- */
+.nach { max-width:760px; margin:0 auto; display:flex; flex-direction:column; gap:12px; }
+.nach .titel { margin:6px 0 14px; }
+.nach .titel h1 { font-size:30px; }
+.frage { background:var(--surface); border-radius:var(--r); box-shadow:var(--shadow); }
+.frage.zu { box-shadow:none; background:transparent; border:1px solid var(--line); }
+.frage-zeile { width:100%; border:none; background:none; display:flex; align-items:center; gap:12px; padding:13px 20px; text-align:left; font-size:14.5px; color:var(--fg-2); }
+.frage-zeile .ok { width:20px; height:20px; border-radius:50%; background:var(--ok); display:grid; place-items:center; flex:none; }
+.frage-zeile .ok svg { width:11px; height:11px; stroke:#fff; stroke-width:2.8; fill:none; }
+.frage-zeile b { color:var(--fg); font-weight:600; }
+.frage-innen { padding:22px; display:flex; flex-direction:column; gap:18px; animation:auf .33s var(--ease) both; }
+@keyframes auf { from { opacity:.001; transform:translateY(-4px); } }
+.frage-innen h2 { font-size:22px; }
+.frage-innen .zitat { border-left:2px solid var(--line-2); padding-left:12px; color:var(--fg-2); font-size:14px; }
+.frage-innen .herkunft-text { color:var(--fg-3); font-size:13px; }
+.wahl { display:grid; grid-template-columns:repeat(4, minmax(0, 1fr)); gap:8px; }
+.wahl button {
+  border:none; border-radius:var(--r-s); background:var(--surface-2); padding:12px 10px; text-align:left; display:flex; flex-direction:column; gap:3px;
+  transition:background .2s, box-shadow .2s, transform .12s var(--ease); min-width:0;
+}
+.wahl button:active { transform:scale(.97); }
+.wahl button b { font-weight:600; font-size:14.5px; }
+.wahl button span { color:var(--fg-3); font-size:12.5px; line-height:1.35; }
+.wahl button[aria-pressed="true"] { background:var(--surface); box-shadow:0 0 0 1.5px var(--accent), 0 0 0 5px var(--accent-soft); }
+.chips { display:flex; flex-wrap:wrap; gap:8px; }
+.zeile-knoepfe { display:flex; gap:10px; align-items:center; flex-wrap:wrap; }
+.zeile-knoepfe .rechts { margin-left:auto; }
+.beschriftung { font-size:13px; color:var(--fg-3); font-weight:500; margin-bottom:6px; display:block; }
+.schritte { margin:0; padding-left:20px; color:var(--fg-2); font-size:13.5px; display:flex; flex-direction:column; gap:2px; }
+
+.ergebnis { display:grid; grid-template-columns:minmax(0, 1fr) minmax(0, 1fr); gap:16px; margin-top:12px; align-items:start; }
+.ergebnis h2 { font-size:18px; margin-bottom:4px; }
+.ergebnis .unter { color:var(--fg-3); font-size:13.5px; margin-bottom:14px; }
+.punkte { list-style:none; margin:0; padding:0; display:flex; flex-direction:column; }
+.punkte > li { display:grid; grid-template-columns:24px minmax(0, 1fr); gap:12px; padding:9px 0; border-top:1px solid var(--line); }
+.punkte > li:first-child { border-top:none; }
+.punkte .pt { font-size:14.5px; }
+.punkte .pn { color:var(--fg-3); font-size:13px; }
+.punkte .tag { display:inline-block; margin-left:6px; font-size:11.5px; color:var(--fg-3); background:var(--surface-2); border-radius:999px; padding:1px 8px; vertical-align:1px; }
+.punkte > li[data-aus="ja"] .pt { color:var(--fg-3); text-decoration:line-through; }
+.mailtext { min-height:340px; font-size:14.5px; }
+.uebernehmen-leiste { position:sticky; bottom:calc(16px + env(safe-area-inset-bottom, 0px)); display:flex; justify-content:flex-end; margin-top:8px; }
+
+/* --- Aufgaben --- */
+.aufgaben { max-width:820px; margin:0 auto; display:flex; flex-direction:column; gap:18px; }
+.aufgabe { background:var(--surface); border-radius:var(--r); box-shadow:var(--shadow); padding:18px 22px; }
+.aufgabe-kopf { display:flex; justify-content:space-between; gap:12px; align-items:baseline; margin-bottom:6px; }
+.aufgabe-kopf button { border:none; background:none; padding:0; font-weight:600; font-size:16px; text-align:left; }
+.aufgabe-kopf button:hover { color:var(--accent-ink); }
+.aufgabe .notiz { color:var(--fg-3); font-size:13.5px; margin-bottom:8px; }
+.punkte .faellig { color:var(--gap-ink); }
+.punkte .ablauf { display:block; color:var(--fg-3); font-size:13px; margin-top:2px; }
+.leer { color:var(--fg-3); text-align:center; padding:40px 0; }
+
+/* ============ Handy ============ */
+@media (max-width: 860px) {
+  .kunde-raster { grid-template-columns:minmax(0, 1fr); }
+  .ergebnis { grid-template-columns:minmax(0, 1fr); }
+}
+@media (max-width: 600px) {
+  .wrap { padding-left:max(16px, env(safe-area-inset-left, 0px)); padding-right:max(16px, env(safe-area-inset-right, 0px)); }
+  .kopf .wrap { grid-template-columns:auto 1fr; }
+  .kopf .links { display:none; }
+  .karte, .frage-innen { padding:18px; }
+  .kzeile { grid-template-columns:minmax(0, 1fr); padding:14px 18px; }
+  .kzeile .lage { text-align:left; }
+  .kzeile .rechts-spalte { align-items:flex-start; }
+  .kzeile .punktreihe { justify-content:flex-start; }
+  .kunde-kopf h1, .ansage h1, .nach .titel h1 { font-size:26px; }
+  .wahl { grid-template-columns:repeat(2, minmax(0, 1fr)); }
+  .nachbereiten-karte { flex-direction:column; align-items:stretch; }
+  .knopf.breit-mobil { width:100%; }
+  .uebernehmen-leiste .knopf { width:100%; }
+  .kundensicht-schalter { width:100%; }
+  .aufgabe { padding:16px 18px; }
+}
+</style>
+</head>
+<body>
+<header class="kopf">
+  <div class="wrap">
+    <div class="links"></div>
+    <div class="umschalter" id="hauptwahl" role="group" aria-label="Ansicht">
+      <span class="gleiter" aria-hidden="true"></span>
+      <button type="button" data-geh="kunden" id="wahl-kunden">Kunden</button>
+      <button type="button" data-geh="aufgaben" id="wahl-aufgaben">Aufgaben <span class="zahl-klein" id="zahl-aufgaben"></span></button>
+    </div>
+    <div class="rechts">
+      <button type="button" class="entwurf-knopf" id="entwurf-knopf" aria-expanded="false">Entwurf</button>
+      <div class="entwurf-text" id="entwurf-text" hidden>
+        <p><b>Klickbarer Entwurf mit erfundenen Kunden.</b> Nichts wird gespeichert, neu laden setzt zurück.</p>
+        <p><b>Gespielt:</b> Die Übergabe an Klar landet hier unter „Aufgaben“. Die Abläufe kommen später aus deinem Wiki, hier sind es Beispiele. Was Claude aus der Mitschrift ergänzt, ist fest vorgegeben.</p>
+        <p><b>Fehlt noch:</b> Konto und Datenbank, Finanzen beim Kunden, Professional Works.</p>
+      </div>
+    </div>
+  </div>
+</header>
+<main class="wrap" id="app"></main>
+<div class="toast" id="toast" role="status" aria-live="polite"></div>
+
+<script id="kern">
+/* Kern: Daten, Themen erkennen, Aufgabe und Mail bauen, Abhaken. Ohne Oberfläche. */
+var HEUTE = "2026-10-17";
+
+var STAND = {
+  mir:       { wort: "Bei mir",      kurz: "bei mir" },
+  kunde:     { wort: "Beim Kunden",  kurz: "beim Kunden" },
+  naechstes: { wort: "Nächstes Mal", kurz: "nächstes Mal" },
+  erledigt:  { wort: "Erledigt",     kurz: "erledigt" }
+};
+var STAND_REIHE = ["mir", "kunde", "naechstes", "erledigt"];
+
+/* Beispiel-Abläufe. Später liest die Zentrale sie aus dem Wiki (wiki/aktuell). */
+var WIKI = {
+  finanzen: {
+    name: "Finanzen", muster: /finanzdaten|finanzakte|einnahmen|ausgaben/i, ablauf: "Finanzübersicht ablegen",
+    was: "Finanzakte ablegen", schritte: ["Finanzakte im Kundenordner speichern"], fertigImTermin: true,
+    erledigtText: "Einnahmen und Ausgaben aufgenommen"
+  },
+  haftpflicht: {
+    name: "Haftpflicht", muster: /haftpflicht|\bphv\b/i, ablauf: "Angebot Sachversicherung",
+    was: "Angebot rechnen", schritte: ["Rechnen (Professional Works oder Xempus)", "In den Beratungsordner legen", "In die Mail an den Kunden"],
+    mail: ["Ich rechne dir ein Angebot und schicke es dir.", "Ich rechne euch ein Angebot und schicke es euch."],
+    danach: { stand: "kunde", was: "Angebot geschickt", text: "Angebot gerechnet und geschickt" }
+  },
+  hausrat: {
+    name: "Hausrat", muster: /hausrat/i, ablauf: "Vergleich Sachversicherung",
+    was: "Vertrag vergleichen", schritte: ["Vertrag aus Professional Works holen", "Vergleichen (Professional Works oder Xempus)", "In den Beratungsordner legen", "In die Mail an den Kunden"],
+    mail: ["Ich vergleiche deinen Vertrag mit dem, was es heute gibt.", "Ich vergleiche euren Vertrag mit dem, was es heute gibt."],
+    danach: { stand: "kunde", was: "Vergleich geschickt", text: "Vertrag verglichen und geschickt" }
+  },
+  bu: {
+    name: "BU", muster: /\bbu\b|berufsunf/i, ablauf: "BU-Voranfrage",
+    was: "Voranfrage stellen", kundeWas: "Gesundheitsfragen klären",
+    schritte: ["Anonyme Voranfrage stellen", "Angebot rechnen", "In die Mail an den Kunden"],
+    mail: ["Ich stelle eine anonyme Voranfrage.", "Ich stelle eine anonyme Voranfrage."],
+    kundeMail: ["Kläre bitte deine Gesundheitsfragen, dann geht die Voranfrage raus.", "Klärt bitte eure Gesundheitsfragen, dann geht die Voranfrage raus."],
+    nachKunde: { stand: "mir", was: "Voranfrage stellen" },
+    danach: { stand: "kunde", was: "Angebot geschickt", text: "Voranfrage gestellt, Angebot geschickt" }
+  },
+  altersvorsorge: {
+    name: "Altersvorsorge", muster: /altersvorsorge|\brente\b|\bav\b/i, ablauf: "Termin Altersvorsorge vorbereiten",
+    was: "Vorschlag vorbereiten", vorbereiten: ["Rentenlücke im Investmentrechner rechnen", "Bestehende Verträge aus Professional Works holen", "Vorschlag vorbereiten"],
+    schritte: ["Rentenlücke im Investmentrechner rechnen", "Vorschlag vorbereiten", "In die Mail an den Kunden"],
+    mail: ["Ich bereite dir einen Vorschlag zur Altersvorsorge vor.", "Ich bereite euch einen Vorschlag zur Altersvorsorge vor."],
+    danach: { stand: "kunde", was: "Vorschlag geschickt", text: "Vorschlag geschickt" }
+  },
+  kfz: {
+    name: "Kfz", muster: /\bkfz\b|autoversicherung|\bauto\b/i, ablauf: "Angebot Kfz",
+    was: "Angebot rechnen", kundeWas: "Fahrzeugschein schicken",
+    schritte: ["Rechnen (Professional Works oder Xempus)", "In die Mail an den Kunden"],
+    mail: ["Ich rechne dir die Kfz-Versicherung neu.", "Ich rechne euch die Kfz-Versicherung neu."],
+    kundeMail: ["Schick mir bitte ein Foto vom Fahrzeugschein.", "Schickt mir bitte ein Foto vom Fahrzeugschein."],
+    nachKunde: { stand: "mir", was: "Angebot rechnen" },
+    danach: { stand: "kunde", was: "Angebot geschickt", text: "Angebot gerechnet und geschickt" }
+  }
+};
+
+var BEISPIEL_MITSCHRIFT = [
+  "Erstgespräch 17.10.",
+  "- selbstständig seit 2023 (Grafikdesign), Gewinn schwankt stark",
+  "- Finanzdaten aufgenommen, Finanzakte angelegt",
+  "- Haftpflicht fehlt komplett -> rechnen",
+  "- Hausrat von 2015, mal vergleichen",
+  "- BU hat sie keine, will erst Gesundheitsfragen klären",
+  "- nächstes Mal Altersvorsorge, will wissen was als Selbstständige geht",
+  "- schickt Steuerbescheid 2025 nach"
+].join("\n");
+
+var _id = 0;
+function neueId(p) { _id += 1; return (p || "x") + _id; }
+
+function tageZwischen(a, b) { return Math.round((Date.parse(b) - Date.parse(a)) / 864e5); }
+function plusTage(iso, n) { var d = new Date(Date.parse(iso) + n * 864e5); return d.toISOString().slice(0, 10); }
+function datum(iso) { var p = iso.split("-"); return p[2] + "." + p[1] + "." + p[0]; }
+function datumKurz(iso) { var p = iso.split("-"); return p[2] + "." + p[1] + "."; }
+
+/* Erfundene Kunden für den Entwurf */
+function beispielStand() {
+  _id = 0;
+  function th(wikiId, stand, was, faden, name) {
+    return { id: neueId("t"), wiki: wikiId, name: name || WIKI[wikiId].name, stand: stand, was: was,
+      faden: faden.map(function (f) { return { id: neueId("f"), d: f[0], text: f[1], intern: !!f[2] }; }) };
+  }
+  var kunden = [
+    {
+      id: "lea", name: "Lea Muster", vorname: "Lea", paar: false, profil: "Selbstständig, 31",
+      offenerTermin: { art: "Erstgespräch", d: HEUTE }, naechsterTermin: null,
+      themen: [],
+      verlauf: [{ id: neueId("v"), d: "2026-10-01", art: "notiz", text: "Erstgespräch vereinbart", intern: false }]
+    },
+    {
+      id: "beispiel", name: "Jonas und Mira Beispiel", vorname: "Jonas und Mira", paar: true, profil: "Paar mit Kind, angestellt",
+      offenerTermin: null, naechsterTermin: null,
+      themen: [
+        th("finanzen", "erledigt", "Einnahmen und Ausgaben aufgenommen", [["2026-08-12", "Im Erstgespräch aufgenommen"]]),
+        th("haftpflicht", "erledigt", "Abgeschlossen", [["2026-08-12", "Fehlt, Angebot zugesagt"], ["2026-08-14", "Angebot gerechnet und geschickt"], ["2026-08-29", "Abgeschlossen"]]),
+        th("altersvorsorge", "kunde", "Vorschlag geschickt", [["2026-08-12", "Für den nächsten Termin gewünscht"], ["2026-10-02", "Im Update besprochen, Rentenlücke gezeigt"], ["2026-10-06", "Vorschlag geschickt"]]),
+        th("bu", "kunde", "Gesundheitsfragen klären", [["2026-10-02", "Mira hat keine, Gesundheitsfragen offen"]]),
+        th("kfz", "naechstes", "Vertrag läuft zum 01.01. aus", [["2026-10-02", "Für den nächsten Termin vorgemerkt"]])
+      ],
+      verlauf: [
+        { id: neueId("v"), d: "2026-08-12", art: "termin", text: "Erstgespräch", themen: "Finanzen, Haftpflicht, Altersvorsorge" },
+        { id: neueId("v"), d: "2026-08-15", art: "notiz", text: "Mail mit den nächsten Schritten verschickt" },
+        { id: neueId("v"), d: "2026-10-02", art: "termin", text: "Update-Termin", themen: "Altersvorsorge, BU, Kfz" },
+        { id: neueId("v"), d: "2026-10-06", art: "notiz", text: "Mail mit den nächsten Schritten verschickt" }
+      ]
+    },
+    {
+      id: "probe", name: "Tom Probe", vorname: "Tom", paar: false, profil: "Angestellt, 44",
+      offenerTermin: null, naechsterTermin: null,
+      themen: [
+        th("hausrat", "mir", "Vertrag vergleichen", [["2026-09-25", "Vertrag von 2012, Vergleich zugesagt"]]),
+        th("kfz", "kunde", "Fahrzeugschein schicken", [["2026-09-25", "Neues Auto ab November"]]),
+        th("haftpflicht", "erledigt", "Kein Bedarf, über den Arbeitgeber versichert", [["2026-09-25", "Kein Bedarf"]])
+      ],
+      verlauf: [{ id: neueId("v"), d: "2026-09-25", art: "termin", text: "Update-Termin", themen: "Hausrat, Kfz, Haftpflicht" }]
+    },
+    {
+      id: "test", name: "Sven Testmann", vorname: "Sven", paar: false, profil: "Beamter, 38",
+      offenerTermin: null, naechsterTermin: "2026-11-05",
+      themen: [
+        th("finanzen", "erledigt", "Einnahmen und Ausgaben aufgenommen", [["2026-09-03", "Im Erstgespräch aufgenommen"]]),
+        th("bu", "erledigt", "Dienstunfähigkeit abgeschlossen", [["2026-09-03", "Voranfrage zugesagt"], ["2026-09-10", "Angebot geschickt"], ["2026-09-24", "Abgeschlossen"]]),
+        th("altersvorsorge", "naechstes", "Termin am 05.11.", [["2026-09-03", "Für den nächsten Termin gewünscht"], ["2026-10-08", "Termin vereinbart"]])
+      ],
+      verlauf: [
+        { id: neueId("v"), d: "2026-09-03", art: "termin", text: "Erstgespräch", themen: "Finanzen, BU, Altersvorsorge" },
+        { id: neueId("v"), d: "2026-10-08", art: "notiz", text: "Termin für den 05.11. vereinbart" }
+      ]
+    }
+  ];
+  function th2(k, wikiName) { return k.themen.filter(function (t) { return t.name === wikiName; })[0].id; }
+  var b = kunden[1], p = kunden[2];
+  var aufgaben = [
+    { id: neueId("a"), kunde: "beispiel", titel: "@Jonas und Mira Beispiel", notiz: "Update-Termin 02.10.2026: Altersvorsorge, BU, Kfz.", punkte: [
+      { id: neueId("p"), t: "Altersvorsorge: Vorschlag vorbereiten", thema: th2(b, "Altersvorsorge"), art: "mir", fertig: true, schritte: WIKI.altersvorsorge.schritte, quelle: WIKI.altersvorsorge.ablauf },
+      { id: neueId("p"), t: "Mail gegenlesen lassen", thema: null, art: "mir", fertig: true, intern: true },
+      { id: neueId("p"), t: "Mail verschicken", thema: null, art: "mir", fertig: true, verlaufText: "Mail mit den nächsten Schritten verschickt" },
+      { id: neueId("p"), t: "Wartet auf Jonas und Mira: Gesundheitsfragen klären", thema: th2(b, "BU"), art: "kunde", fertig: false, seit: "2026-10-02", wieder: "2026-10-09" },
+      { id: neueId("p"), t: "Termin vereinbaren", thema: null, art: "mir", fertig: false, notiz: "Für Kfz, bis Ende November", verlaufText: "Termin vereinbart" }
+    ] },
+    { id: neueId("a"), kunde: "probe", titel: "@Tom Probe", notiz: "Update-Termin 25.09.2026: Hausrat, Kfz, Haftpflicht.", punkte: [
+      { id: neueId("p"), t: "Hausrat: Vertrag vergleichen", thema: th2(p, "Hausrat"), art: "mir", fertig: false, schritte: WIKI.hausrat.schritte, quelle: WIKI.hausrat.ablauf },
+      { id: neueId("p"), t: "Wartet auf Tom: Fahrzeugschein schicken", thema: th2(p, "Kfz"), art: "kunde", fertig: false, seit: "2026-09-25", wieder: "2026-10-02" }
+    ] }
+  ];
+  return { kunden: kunden, aufgaben: aufgaben };
+}
+
+function anrede(k, i) { return k.paar ? i[1] : i[0]; }
+
+/* Themen aus der Mitschrift: Abläufe aus dem Wiki per Stichwort, der Rest später per Claude.
+   Im Entwurf erkennt eine einfache Regel „schickt … nach“ als Aufgabe für den Kunden. */
+function erkenneThemen(text) {
+  var gefunden = [], gesehen = {};
+  String(text || "").split(/\n/).forEach(function (roh) {
+    var zeile = roh.replace(/^\s*[-*•]\s*/, "").trim();
+    if (!zeile) { return; }
+    var treffer = null;
+    Object.keys(WIKI).forEach(function (id) { if (!treffer && WIKI[id].muster.test(zeile)) { treffer = id; } });
+    if (treffer) {
+      if (gesehen[treffer]) { return; }
+      gesehen[treffer] = 1;
+      gefunden.push({ wiki: treffer, name: WIKI[treffer].name, zitat: zeile, quelle: "mitschrift", stand: vorschlagStand(treffer, zeile) });
+      return;
+    }
+    var m = zeile.match(/^(?:schickt|bringt|reicht)\s+(.+?)\s+(nach|mit)\b/i);
+    if (m) {
+      var name = m[1].charAt(0).toUpperCase() + m[1].slice(1);
+      gefunden.push({ wiki: null, name: name, zitat: zeile, quelle: "claude", stand: "kunde", was: name + " schicken" });
+    }
+  });
+  return gefunden;
+}
+
+function vorschlagStand(wikiId, zeile) {
+  var w = WIKI[wikiId];
+  if (w.fertigImTermin) { return "erledigt"; }
+  if (/n[äa]chst/i.test(zeile)) { return "naechstes"; }
+  if (/will erst|kl[äa]rt|kl[äa]ren|schickt|[üu]berlegt|meldet sich/i.test(zeile)) { return "kunde"; }
+  return "mir";
+}
+
+function vorschlagWas(t) {
+  var w = t.wiki ? WIKI[t.wiki] : null;
+  if (t.stand === "kunde") { return (w && w.kundeWas) || t.was || "meldet sich"; }
+  if (t.stand === "naechstes") { return "Im nächsten Termin besprechen"; }
+  if (t.stand === "erledigt") { return (w && w.erledigtText) || "Im Termin erledigt"; }
+  return (w && w.was) || t.was || "erledigen";
+}
+
+/* Eine Aufgabe je Kunde (Regel aus Klar). Punkte je Thema, dazu Mail und Termin. */
+function baueAufgabe(k, termin, themen) {
+  var punkte = [], aktiv = themen.filter(function (t) { return t.stand !== "erledigt"; });
+  themen.forEach(function (t) {
+    var w = t.wiki ? WIKI[t.wiki] : null;
+    if (t.stand === "mir") {
+      punkte.push({ key: "mir-" + t.key, t: t.name + ": " + t.was, thema: t.key, art: "mir", schritte: w ? w.schritte : null, quelle: w ? w.ablauf : null });
+    } else if (t.stand === "kunde") {
+      punkte.push({ key: "kunde-" + t.key, t: "Wartet auf " + k.vorname + ": " + t.was, thema: t.key, art: "kunde", notiz: "Wiedervorlage " + datum(plusTage(termin.d, 7)) });
+    } else if (t.stand === "erledigt" && w && w.fertigImTermin && w.schritte) {
+      punkte.push({ key: "ablage-" + t.key, t: w.schritte[0], thema: null, art: "mir", intern: true });
+    }
+  });
+  var naechstes = themen.filter(function (t) { return t.stand === "naechstes"; });
+  if (aktiv.length) {
+    punkte.push({ key: "mail-lesen", t: "Mail gegenlesen lassen", thema: null, art: "mir", intern: true, notiz: "Entwurf liegt in der Zentrale" });
+    punkte.push({ key: "mail-raus", t: "Mail verschicken", thema: null, art: "mir", verlaufText: "Mail mit den nächsten Schritten verschickt" });
+  }
+  if (naechstes.length) {
+    var vor = [];
+    naechstes.forEach(function (t) { var w = t.wiki ? WIKI[t.wiki] : null; (w && w.vorbereiten || []).forEach(function (s) { if (vor.indexOf(s) < 0) { vor.push(s); } }); });
+    punkte.push({ key: "termin", t: "Termin vereinbaren", thema: null, art: "mir", verlaufText: "Nächsten Termin vereinbart" });
+    punkte.push({ key: "vorbereiten", t: "Termin vorbereiten", thema: null, art: "mir", intern: true,
+      notiz: "Vorbereiten: " + naechstes.map(function (t) { return t.name; }).join(", "), schritte: vor.length ? vor : null,
+      quelle: naechstes.length === 1 && naechstes[0].wiki && WIKI[naechstes[0].wiki].vorbereiten ? WIKI[naechstes[0].wiki].ablauf : null });
+  }
+  return {
+    titel: "@" + k.name,
+    notiz: termin.art + " " + datum(termin.d) + ": " + themen.map(function (t) { return t.name; }).join(", ") + ".",
+    punkte: punkte
+  };
+}
+
+function mailZeile(k, t) {
+  var w = t.wiki ? WIKI[t.wiki] : null;
+  if (t.stand === "mir") { return t.name + ": " + (w && w.mail && t.was === w.was ? anrede(k, w.mail) : t.was + "."); }
+  if (t.stand === "kunde") { return t.name + ": " + (w && w.kundeMail && t.was === w.kundeWas ? anrede(k, w.kundeMail) : t.was + "."); }
+  return t.name;
+}
+
+function baueMail(k, termin, themen) {
+  var gruppe = function (st) { return themen.filter(function (t) { return t.stand === st; }); };
+  var mir = gruppe("mir"), kd = gruppe("kunde"), na = gruppe("naechstes");
+  var finanzen = themen.some(function (t) { return t.wiki === "finanzen" && t.stand === "erledigt"; });
+  var euch = k.paar;
+  var z = [];
+  z.push("Hey " + k.vorname.replace(" und ", ", hey ") + ",");
+  z.push("");
+  z.push("ich sende " + (euch ? "euch" : "dir") + " hier einmal die ToDos aus unserem Termin." +
+    (finanzen ? " Heute haben wir " + (euch ? "eure" : "deine") + " Einnahmen und Ausgaben aufgenommen und die nächsten Schritte festgehalten." : ""));
+  if (mir.length) { z.push(""); z.push("Bei mir:"); mir.forEach(function (t) { z.push("- " + mailZeile(k, t)); }); }
+  if (kd.length) { z.push(""); z.push(euch ? "Bei euch:" : "Bei dir:"); kd.forEach(function (t) { z.push("- " + mailZeile(k, t)); }); }
+  if (na.length) { z.push(""); z.push("Nächstes Mal:"); na.forEach(function (t) { z.push("- " + mailZeile(k, t)); }); }
+  z.push("");
+  z.push("Bis dahin, " + (euch ? "meldet euch" : "melde dich") + " gerne bei Fragen!");
+  z.push("Lukas");
+  return z.join("\n");
+}
+
+/* Nachbereitung übernehmen: Themen beim Kunden fortschreiben, Aufgabe in Klar, Verlauf. */
+function uebernehmen(S, kundeId, termin, themen, aufgabe) {
+  var k = S.kunden.filter(function (x) { return x.id === kundeId; })[0];
+  var neu = { themen: [], verlauf: [] };
+  var themaId = {};
+  themen.forEach(function (t) {
+    var vorhanden = k.themen.filter(function (x) { return (t.bestand && x.id === t.bestand) || (!t.bestand && t.wiki && x.wiki === t.wiki); })[0];
+    var text = termin.art + ": " + (t.stand === "erledigt" ? t.was : STAND[t.stand].kurz + ", " + t.was);
+    var f = { id: neueId("f"), d: termin.d, text: text };
+    if (vorhanden) {
+      vorhanden.stand = t.stand; vorhanden.was = t.was; vorhanden.faden.push(f);
+      themaId[t.key] = vorhanden.id;
+    } else {
+      var nt = { id: neueId("t"), wiki: t.wiki, name: t.name, stand: t.stand, was: t.was, faden: [f] };
+      k.themen.push(nt); themaId[t.key] = nt.id;
+    }
+    neu.themen.push(f.id);
+  });
+  var v = { id: neueId("v"), d: termin.d, art: "termin", text: termin.art, themen: themen.map(function (t) { return t.name; }).join(", ") };
+  k.verlauf.push(v); neu.verlauf.push(v.id);
+  var punkte = aufgabe.punkte.filter(function (p) { return p.an !== false; }).map(function (p) {
+    return { id: neueId("p"), t: p.t, notiz: p.notiz, thema: p.thema ? themaId[p.thema] : null, art: p.art, fertig: false,
+      schritte: p.schritte, quelle: p.quelle, intern: p.intern, verlaufText: p.verlaufText,
+      seit: p.art === "kunde" ? termin.d : undefined, wieder: p.art === "kunde" ? plusTage(termin.d, 7) : undefined };
+  });
+  var alt = S.aufgaben.filter(function (a) { return a.kunde === kundeId; })[0];
+  if (alt) { alt.notiz = aufgabe.notiz; alt.punkte = alt.punkte.concat(punkte); }
+  else if (punkte.length) { S.aufgaben.push({ id: neueId("a"), kunde: kundeId, titel: aufgabe.titel, notiz: aufgabe.notiz, punkte: punkte }); }
+  k.offenerTermin = null;
+  if (punkte.length) {
+    var kv = { id: neueId("v"), d: termin.d, art: "notiz", text: "In Klar übernommen: " + punkte.length + " Punkte", intern: true };
+    k.verlauf.push(kv); neu.verlauf.push(kv.id);
+  }
+  return { neu: neu, punkte: punkte.length };
+}
+
+/* Abhaken (in Klar oder hier – derselbe Punkt). Schreibt den Faden des Themas fort. */
+function abhaken(S, aufgabeId, punktId, an, heute) {
+  var a = S.aufgaben.filter(function (x) { return x.id === aufgabeId; })[0];
+  var p = a.punkte.filter(function (x) { return x.id === punktId; })[0];
+  var k = S.kunden.filter(function (x) { return x.id === a.kunde; })[0];
+  var th = p.thema ? k.themen.filter(function (t) { return t.id === p.thema; })[0] : null;
+  if (an === p.fertig) { return null; }
+  p.fertig = an;
+  if (an) {
+    p.vorher = th ? { stand: th.stand, was: th.was } : null;
+    p.spur = [];
+    if (th) {
+      var w = th.wiki ? WIKI[th.wiki] : null;
+      var nachher = null, text = null;
+      if (p.art === "kunde") {
+        nachher = (w && w.nachKunde) || { stand: "erledigt", was: "Erhalten" };
+        text = p.t.replace(/^Wartet auf [^:]+:\s*/, "") + ": erledigt";
+      } else {
+        var offen = a.punkte.filter(function (x) { return x.thema === p.thema && x.art === "mir" && !x.fertig; }).length;
+        if (!offen) { nachher = (w && w.danach) || { stand: "erledigt", was: "Erledigt" }; text = (w && w.danach && w.danach.text) || p.t; }
+      }
+      if (nachher) {
+        th.stand = nachher.stand; th.was = nachher.was;
+        var f = { id: neueId("f"), d: heute, text: text };
+        th.faden.push(f); p.spur.push({ wo: "faden", id: f.id });
+      }
+    }
+    if (p.verlaufText) {
+      var v = { id: neueId("v"), d: heute, art: "notiz", text: p.verlaufText };
+      k.verlauf.push(v); p.spur.push({ wo: "verlauf", id: v.id });
+    }
+  } else {
+    if (th && p.vorher) { th.stand = p.vorher.stand; th.was = p.vorher.was; }
+    (p.spur || []).forEach(function (s) {
+      if (s.wo === "faden" && th) { th.faden = th.faden.filter(function (f) { return f.id !== s.id; }); }
+      if (s.wo === "verlauf") { k.verlauf = k.verlauf.filter(function (v) { return v.id !== s.id; }); }
+    });
+    p.spur = []; p.vorher = null;
+  }
+  return { kunde: k, thema: th };
+}
+
+if (typeof module !== "undefined") {
+  module.exports = { HEUTE: HEUTE, WIKI: WIKI, STAND: STAND, BEISPIEL_MITSCHRIFT: BEISPIEL_MITSCHRIFT, beispielStand: beispielStand,
+    erkenneThemen: erkenneThemen, vorschlagWas: vorschlagWas, baueAufgabe: baueAufgabe, baueMail: baueMail, uebernehmen: uebernehmen, abhaken: abhaken };
+}
+</script>
+
+<script>
+/* Oberfläche: ein Zustand S, eine render(), go(seite) blendet ein. */
+var S = beispielStand();
+S.seite = "kunden"; S.kunde = null; S.kundensicht = false; S.offen = {}; S.filter = "mir"; S.neu = null; S.nb = null;
+
+var app = document.getElementById("app");
+var esc = function (s) { return String(s == null ? "" : s).replace(/[&<>"]/g, function (c) { return { "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]; }); };
+var HAKEN_SVG = '<svg viewBox="0 0 14 14" aria-hidden="true"><path d="M2.5 7.4l2.9 2.9 6-6.4"/></svg>';
+function kundeVon(id) { return S.kunden.filter(function (k) { return k.id === id; })[0]; }
+function aufgabeVon(id) { return S.aufgaben.filter(function (a) { return a.kunde === id; })[0]; }
+function standPille(st, wort) { return '<span class="stand" data-st="' + st + '">' + esc(wort || STAND[st].wort) + "</span>"; }
+function sortThemen(th) { return th.slice().sort(function (a, b) { return STAND_REIHE.indexOf(a.stand) - STAND_REIHE.indexOf(b.stand); }); }
+
+function go(seite, kundeId) {
+  S.seite = seite; if (kundeId !== undefined) { S.kunde = kundeId; }
+  if (seite !== "kunde") { S.kundensicht = false; }
+  render(true);
+  window.scrollTo({ top: 0 });
+}
+
+function render(rein) {
+  var html = S.seite === "kunden" ? seiteKunden() : S.seite === "kunde" ? seiteKunde() : S.seite === "nach" ? seiteNach() : seiteAufgaben();
+  app.innerHTML = '<div class="' + (rein ? "seite" : "") + '">' + html + "</div>";
+  kopf();
+  filterGleiter();
+  mailHoehe();
+  S.neu = null;
+}
+
+function mailHoehe() {
+  var m = document.getElementById("mailtext");
+  if (m) { m.style.height = "auto"; m.style.height = (m.scrollHeight + 4) + "px"; }
+}
+
+function kopf() {
+  var oben = S.seite === "aufgaben" ? "aufgaben" : "kunden";
+  var g = document.getElementById("hauptwahl");
+  g.querySelectorAll("button").forEach(function (b) { b.setAttribute("aria-pressed", String(b.dataset.geh === oben)); });
+  var offen = 0;
+  S.aufgaben.forEach(function (a) { a.punkte.forEach(function (p) { if (!p.fertig && p.art === "mir") { offen += 1; } }); });
+  document.getElementById("zahl-aufgaben").textContent = offen;
+  var akt = g.querySelector('[aria-pressed="true"]'), gl = g.querySelector(".gleiter");
+  gl.style.left = akt.offsetLeft + "px"; gl.style.width = akt.offsetWidth + "px";
+}
+
+/* ---------- Kunden ---------- */
+function lageText(k) {
+  var a = aufgabeVon(k.id);
+  var warten = a ? a.punkte.filter(function (p) { return p.art === "kunde" && !p.fertig; }) : [];
+  if (k.offenerTermin) { return { text: k.offenerTermin.art + " " + (k.offenerTermin.d === HEUTE ? "heute" : datum(k.offenerTermin.d)) + ", nicht nachbereitet", draengt: true }; }
+  var alt = warten.filter(function (p) { return p.wieder && p.wieder <= HEUTE; })[0];
+  if (alt) { return { text: "Wartet seit " + tageZwischen(alt.seit, HEUTE) + " Tagen: " + p_kurz(alt.t), draengt: true }; }
+  if (k.naechsterTermin) { return { text: "Nächster Termin " + datumKurz(k.naechsterTermin), draengt: false }; }
+  var mir = a ? a.punkte.filter(function (p) { return p.art === "mir" && !p.fertig; }).length : 0;
+  return { text: mir ? mir + (mir === 1 ? " Punkt" : " Punkte") + " bei mir" : "Nichts offen", draengt: false };
+}
+function p_kurz(t) { return t.replace(/^Wartet auf [^:]+:\s*/, ""); }
+
+function seiteKunden() {
+  var t = [];
+  t.push('<div class="kunden">');
+  var offen = S.kunden.filter(function (k) { return k.offenerTermin; });
+  t.push('<div class="ansage"><h1>' + (offen.length ? offen.length + (offen.length === 1 ? " Termin wartet" : " Termine warten") + " aufs Nachbereiten" : "Alle Termine nachbereitet") + "</h1></div>");
+  offen.forEach(function (k) {
+    t.push('<div class="nachbereiten-karte"><div class="was"><b>' + esc(k.name) + "</b><span>" + esc(k.offenerTermin.art) + " " + (k.offenerTermin.d === HEUTE ? "heute" : datum(k.offenerTermin.d)) +
+      '</span></div><button type="button" class="knopf akzent breit-mobil" data-nachbereiten="' + k.id + '">Nachbereiten</button></div>');
+  });
+  t.push('<div class="liste" role="list">');
+  S.kunden.forEach(function (k) {
+    var l = lageText(k);
+    t.push('<button type="button" class="kzeile" role="listitem" data-kunde="' + k.id + '">' +
+      '<span><span class="name">' + esc(k.name) + '</span><br><span class="profil">' + esc(k.profil) + "</span></span>" +
+      '<span class="rechts-spalte">' +
+      '<span class="punktreihe" aria-hidden="true">' + sortThemen(k.themen).map(function (th) { return '<i data-st="' + th.stand + '" title="' + esc(th.name) + '"></i>'; }).join("") + "</span>" +
+      '<span class="lage' + (l.draengt ? " draengt" : "") + '">' + esc(l.text) + "</span></span></button>");
+  });
+  t.push("</div></div>");
+  return t.join("");
+}
+
+/* ---------- Kundenseite ---------- */
+function seiteKunde() {
+  var k = kundeVon(S.kunde), ks = S.kundensicht, t = [];
+  t.push('<button type="button" class="zurueck" data-geh="kunden">‹ Kunden</button>');
+  t.push('<div class="kunde-kopf"><div><h1>' + esc(k.name) + '</h1><p class="profil">' + esc(k.profil) + "</p></div>");
+  t.push('<div class="aktionen">');
+  t.push('<button type="button" class="kundensicht-schalter" id="kundensicht" aria-pressed="' + ks + '"><span class="bahn"></span>Mit ' + esc(k.vorname) + " ansehen</button>");
+  if (!ks) { t.push('<button type="button" class="knopf ' + (k.offenerTermin ? "akzent" : "still") + ' breit-mobil" data-nachbereiten="' + k.id + '">' + (k.offenerTermin ? k.offenerTermin.art + " nachbereiten" : "Termin nachbereiten") + "</button>"); }
+  t.push("</div></div>");
+
+  t.push('<div class="kunde-raster"><section aria-label="Themen">');
+  if (!k.themen.length) {
+    t.push('<div class="karte leise">Noch keine Themen. Sie entstehen beim Nachbereiten des ersten Termins.</div>');
+  } else {
+    var zahl = {};
+    k.themen.forEach(function (th) { zahl[th.stand] = (zahl[th.stand] || 0) + 1; });
+    t.push('<div class="bilanz">' + STAND_REIHE.filter(function (s) { return zahl[s]; }).map(function (s) {
+      return standPille(s, zahl[s] + " " + (s === "kunde" ? (ks ? (k.paar ? "bei euch" : "bei dir") : "beim Kunden") : STAND[s].kurz));
+    }).join("") + "</div>");
+    t.push('<div class="themen">');
+    sortThemen(k.themen).forEach(function (th) {
+      var faden = th.faden.filter(function (f) { return !(ks && f.intern); });
+      var auf = !!S.offen[th.id];
+      var wort = th.stand === "kunde" && ks ? (k.paar ? "Bei euch" : "Bei dir") : STAND[th.stand].wort;
+      t.push('<article class="thema" data-thema="' + th.id + '">');
+      t.push('<button type="button" class="thema-kopf" data-auf="' + th.id + '" aria-expanded="' + auf + '"><span class="tname">' + esc(th.name) + '</span>' + standPille(th.stand, wort) + '<span class="twas">' + esc(th.was) + "</span></button>");
+      if (auf) {
+        t.push('<ol class="faden-liste">' + faden.slice().reverse().map(function (f) {
+          return '<li class="' + (S.neu && S.neu.indexOf(f.id) >= 0 ? "neu" : "") + '"><span class="d">' + datumKurz(f.d) + "</span><span>" + esc(f.text) + "</span></li>";
+        }).join("") + "</ol>");
+      } else {
+        t.push('<div class="faden" aria-hidden="true">' + faden.map(function (f, i) {
+          var letzter = i === faden.length - 1;
+          return (i ? '<span class="s"></span>' : "") + '<span class="k' + (letzter ? " letzter" : "") + '" data-st="' + th.stand + '"></span>';
+        }).join("") + '<span class="wann">' + (faden.length ? "seit " + datumKurz(faden[0].d) + " · " + faden.length + (faden.length === 1 ? " Schritt" : " Schritte") : "") + "</span></div>");
+      }
+      t.push("</article>");
+    });
+    t.push("</div>");
+  }
+  t.push("</section>");
+
+  t.push('<aside class="seitenspalte"><div class="karte"><h2>Verlauf</h2><ol class="verlauf">');
+  k.verlauf.filter(function (v) { return !(ks && v.intern); }).slice().reverse().forEach(function (v) {
+    t.push('<li data-art="' + v.art + '" class="' + (S.neu && S.neu.indexOf(v.id) >= 0 ? "neu" : "") + '"><span class="p"></span><span class="t">' +
+      (v.art === "termin" ? "<b>" + esc(v.text) + "</b>" : esc(v.text)) + "<small>" + datum(v.d) + (v.themen ? " · " + esc(v.themen) : "") + "</small></span></li>");
+  });
+  t.push("</ol></div>");
+  if (!ks) { t.push('<div class="platzhalter"><b>Finanzen</b>Einnahmen, Ausgaben und was frei ist, kommen mit Schritt 3 hierher.</div>'); }
+  t.push("</aside></div>");
+  return t.join("");
+}
+
+/* ---------- Nachbereiten ---------- */
+function starteNach(kundeId) {
+  var k = kundeVon(kundeId);
+  var termin = k.offenerTermin || { art: "Update-Termin", d: HEUTE };
+  var bestand = k.themen.filter(function (th) { return th.stand !== "erledigt"; }).map(function (th) {
+    return { key: "b" + th.id, bestand: th.id, wiki: th.wiki, name: th.name, quelle: "bestand", zitat: "Zuletzt: " + th.was, stand: th.stand, was: th.was, gewaehlt: true };
+  });
+  S.nb = { kunde: kundeId, termin: { art: termin.art, d: termin.d }, mitschrift: "", themen: bestand, offen: 0, fertig: {}, aufgabe: null, mail: null, mailEigen: false };
+  go("nach", kundeId);
+}
+
+function nbGewaehlt() { return S.nb.themen.filter(function (t) { return t.gewaehlt; }); }
+
+function themenAusMitschrift() {
+  var nb = S.nb, alte = {};
+  nb.themen.forEach(function (t) { alte[t.wiki || t.name] = t; });
+  nb.themen = nb.themen.filter(function (t) { return t.quelle !== "mitschrift" && t.quelle !== "claude"; });
+  erkenneThemen(nb.mitschrift).forEach(function (e) {
+    var da = nb.themen.filter(function (t) { return (e.wiki && t.wiki === e.wiki) || t.name === e.name; })[0];
+    if (da) { da.zitat = e.zitat; return; }
+    var vorher = alte[e.wiki || e.name];
+    var t = { key: "m" + (e.wiki || e.name), wiki: e.wiki, name: e.name, quelle: e.quelle, zitat: e.zitat, stand: e.stand, was: e.was, gewaehlt: vorher ? vorher.gewaehlt : true };
+    if (vorher && vorher.quelle === e.quelle) { t.stand = vorher.stand; t.was = vorher.was; }
+    if (!t.was) { t.was = vorschlagWas(t); }
+    nb.themen.push(t);
+  });
+}
+
+function seiteNach() {
+  var nb = S.nb, k = kundeVon(nb.kunde), t = [];
+  var gew = nbGewaehlt();
+  t.push('<button type="button" class="zurueck" data-kunde="' + k.id + '">‹ ' + esc(k.name) + "</button>");
+  t.push('<div class="nach"><div class="titel"><h1>' + esc(nb.termin.art) + " nachbereiten</h1><p class=\"leise\">" + esc(k.name) + " · " + datum(nb.termin.d) + "</p></div>");
+
+  /* 0: Mitschrift */
+  frage(t, 0, "Mitschrift", nb.mitschrift ? nb.mitschrift.split("\n").filter(Boolean).length + " Zeilen aus OneNote" : "ohne Mitschrift", function () {
+    var x = [];
+    x.push("<h2>Was steht in deiner Mitschrift?</h2>");
+    x.push('<div><label class="beschriftung" for="mitschrift">Aus OneNote kopieren und hier einfügen</label><textarea class="feld" id="mitschrift" rows="9" placeholder="Stichpunkte aus dem Termin">' + esc(nb.mitschrift) + "</textarea></div>");
+    x.push('<div class="zeile-knoepfe">' + (k.id === "lea" ? '<button type="button" class="knopf still klein" id="beispiel-mitschrift">Beispiel-Mitschrift einfügen</button>' : "") +
+      '<button type="button" class="knopf rechts" data-weiter="0">Weiter: Themen</button></div>');
+    return x.join("");
+  });
+
+  /* 1: Themen */
+  frage(t, 1, "Themen", gew.length ? gew.map(function (x) { return x.name; }).join(", ") : "keine", function () {
+    var x = [];
+    x.push("<h2>Welche Themen kamen vor?</h2>");
+    var aus = nb.themen.filter(function (x) { return x.quelle === "mitschrift" || x.quelle === "claude"; }).length;
+    var best = nb.themen.filter(function (x) { return x.quelle === "bestand"; }).length;
+    var hinweis = [];
+    if (aus) { hinweis.push(aus + " aus der Mitschrift"); }
+    if (best) { hinweis.push(best + " noch offen von vorher"); }
+    if (hinweis.length) { x.push('<p class="herkunft-text">' + hinweis.join(", ") + ". Antippen nimmt ein Thema raus oder rein.</p>"); }
+    x.push('<div class="chips">');
+    nb.themen.forEach(function (th, i) { x.push('<button type="button" class="chip" data-thema-wahl="' + i + '" aria-pressed="' + th.gewaehlt + '">' + esc(th.name) + "</button>"); });
+    Object.keys(WIKI).forEach(function (id) {
+      if (!nb.themen.some(function (th) { return th.wiki === id; })) { x.push('<button type="button" class="chip" data-thema-neu="' + id + '" aria-pressed="false">' + esc(WIKI[id].name) + "</button>"); }
+    });
+    x.push("</div>");
+    x.push('<div style="display:flex;gap:8px"><input class="feld" id="eigenes-thema" placeholder="Eigenes Thema, z. B. Rechtsschutz" autocomplete="off"><button type="button" class="knopf still" id="eigenes-dazu">Dazu</button></div>');
+    x.push('<div class="zeile-knoepfe"><button type="button" class="knopf rechts" data-weiter="1"' + (gew.length ? "" : " disabled") + ">Weiter: " + (gew.length ? esc(gew[0].name) : "Themen") + "</button></div>");
+    return x.join("");
+  });
+
+  /* 2…: je Thema eine Frage */
+  gew.forEach(function (th, i) {
+    var idx = 2 + i;
+    frage(t, idx, th.name, STAND[th.stand].wort + " · " + th.was, function () {
+      var x = [], w = th.wiki ? WIKI[th.wiki] : null;
+      x.push("<h2>" + esc(th.name) + ": Wer ist dran?</h2>");
+      if (th.zitat) { x.push('<p class="zitat">' + esc(th.zitat) + "</p>"); }
+      if (th.quelle === "claude") { x.push('<p class="herkunft-text">Von Claude aus der Mitschrift ergänzt (im Entwurf fest vorgegeben).</p>'); }
+      var opt = [
+        ["mir", "Ich", "Ich mache etwas"],
+        ["kunde", k.vorname, (k.paar ? "machen" : "macht") + " etwas"],
+        ["naechstes", "Nächstes Mal", "im nächsten Termin"],
+        ["erledigt", "Erledigt", "im Termin geklärt oder kein Bedarf"]
+      ];
+      x.push('<div class="wahl" role="group" aria-label="Wer ist dran">' + opt.map(function (o) {
+        return '<button type="button" data-stand="' + o[0] + '" data-i="' + i + '" aria-pressed="' + (th.stand === o[0]) + '"><b>' + esc(o[1]) + "</b><span>" + esc(o[2]) + "</span></button>";
+      }).join("") + "</div>");
+      var label = th.stand === "mir" ? "Was machst du?" : th.stand === "kunde" ? "Was " + (k.paar ? "machen" : "macht") + " " + k.vorname + "?" : th.stand === "naechstes" ? "Was soll nächstes Mal dran sein?" : "Was ist rausgekommen?";
+      x.push('<div><label class="beschriftung" for="was-' + i + '">' + esc(label) + '</label><input class="feld" id="was-' + i + '" data-was="' + i + '" value="' + esc(th.was) + '" autocomplete="off"></div>');
+      if (th.stand === "mir" && w && w.schritte) {
+        x.push('<div><span class="beschriftung">Ablauf aus dem Wiki: ' + esc(w.ablauf) + '</span><ol class="schritte">' + w.schritte.map(function (s) { return "<li>" + esc(s) + "</li>"; }).join("") + "</ol></div>");
+      }
+      if (th.stand === "naechstes" && w && w.vorbereiten) {
+        x.push('<div><span class="beschriftung">Zum Vorbereiten, aus dem Wiki</span><ol class="schritte">' + w.vorbereiten.map(function (s) { return "<li>" + esc(s) + "</li>"; }).join("") + "</ol></div>");
+      }
+      var naechste = gew[i + 1];
+      x.push('<div class="zeile-knoepfe"><button type="button" class="knopf rechts" data-weiter="' + idx + '">Weiter: ' + (naechste ? esc(naechste.name) : "Ergebnis") + "</button></div>");
+      return x.join("");
+    });
+  });
+
+  /* Ergebnis */
+  var alleFertig = gew.length && gew.every(function (th, i) { return nb.fertig[2 + i]; }) && nb.fertig[1];
+  if (alleFertig) {
+    if (!nb.aufgabe) {
+      nb.aufgabe = baueAufgabe(k, nb.termin, gew);
+    }
+    if (!nb.mailEigen) { nb.mail = baueMail(k, nb.termin, gew); }
+    var an = nb.aufgabe.punkte.filter(function (p) { return p.an !== false; }).length;
+    t.push('<div class="ergebnis" id="ergebnis">');
+    t.push('<section class="karte"><h2>Für Klar</h2><p class="unter">' + esc(nb.aufgabe.titel) + " · " + an + " Punkte</p><ul class=\"punkte\">");
+    nb.aufgabe.punkte.forEach(function (p, j) {
+      var aus = p.an === false;
+      t.push('<li data-aus="' + (aus ? "ja" : "nein") + '"><button type="button" class="haken" role="checkbox" aria-checked="' + !aus + '" data-punkt-an="' + j + '" aria-label="' + esc(p.t) + ' übernehmen">' + HAKEN_SVG + "</button><span>" +
+        '<span class="pt">' + esc(p.t) + (p.quelle ? '<span class="tag">Wiki</span>' : "") + "</span>" +
+        (p.notiz ? '<br><span class="pn">' + esc(p.notiz) + "</span>" : "") +
+        (p.schritte ? '<span class="ablauf">' + p.schritte.map(esc).join(" · ") + "</span>" : "") + "</span></li>");
+    });
+    t.push("</ul></section>");
+    t.push('<section class="karte"><h2>Mail an ' + esc(k.vorname) + '</h2><p class="unter">Bei mir, bei ' + (k.paar ? "euch" : "dir") + ', nächstes Mal</p><textarea class="feld mailtext" id="mailtext" aria-label="Mailtext">' + esc(nb.mail) + "</textarea>" +
+      '<div class="zeile-knoepfe" style="margin-top:12px"><button type="button" class="knopf still klein" id="mail-kopieren">Text kopieren</button></div></section>');
+    t.push("</div>");
+    t.push('<div class="uebernehmen-leiste"><button type="button" class="knopf akzent" id="uebernehmen">In Klar übernehmen</button></div>');
+  }
+  t.push("</div>");
+  return t.join("");
+}
+
+function frage(t, idx, titel, zusammen, innen) {
+  var nb = S.nb, offen = nb.offen === idx;
+  if (!offen && !nb.fertig[idx] && idx > nb.offen) { return; }
+  t.push('<section class="frage' + (offen ? "" : " zu") + '" data-frage="' + idx + '">');
+  if (offen) { t.push('<div class="frage-innen">' + innen() + "</div>"); }
+  else { t.push('<button type="button" class="frage-zeile" data-oeffne="' + idx + '"><span class="ok">' + HAKEN_SVG + "</span><span><b>" + esc(titel) + "</b> · " + esc(zusammen) + "</span></button>"); }
+  t.push("</section>");
+}
+
+/* Ändert sich die Themenauswahl, verschieben sich die Fragen danach: neu beantworten lassen. */
+function themenFragenZuruecksetzen() {
+  Object.keys(S.nb.fertig).forEach(function (i) { if (+i >= 2) { delete S.nb.fertig[i]; } });
+}
+
+function weiter(idx) {
+  var nb = S.nb;
+  nb.fertig[idx] = true;
+  if (idx === 0) { themenAusMitschrift(); }
+  if (idx <= 1) { themenFragenZuruecksetzen(); }
+  nb.aufgabe = null;
+  var gew = nbGewaehlt();
+  var letzte = 1 + gew.length;
+  var naechste = idx + 1;
+  while (naechste <= letzte && nb.fertig[naechste]) { naechste += 1; }
+  nb.offen = naechste <= letzte ? naechste : -1;
+  render(false);
+  var ziel = nb.offen >= 0 ? app.querySelector('[data-frage="' + nb.offen + '"]') : document.getElementById("ergebnis");
+  if (ziel) {
+    ziel.scrollIntoView({ block: "start", behavior: "smooth" });
+    var f = ziel.querySelector("input, textarea");
+    if (f && nb.offen >= 0) { f.focus({ preventScroll: true }); }
+  }
+}
+
+/* ---------- Aufgaben ---------- */
+function seiteAufgaben() {
+  var t = [], f = S.filter;
+  var zaehl = { mir: 0, kunde: 0, fertig: 0 };
+  S.aufgaben.forEach(function (a) { a.punkte.forEach(function (p) { if (p.fertig) { zaehl.fertig += 1; } else { zaehl[p.art] += 1; } }); });
+  t.push('<div class="aufgaben"><div class="ansage"><h1>' + (f === "mir" ? zaehl.mir + " Punkte bei mir" : f === "kunde" ? zaehl.kunde + " warten auf Kunden" : zaehl.fertig + " erledigt") + '</h1><p class="leise">Dieselben Aufgaben wie in Klar. Abhaken hier oder in Klar, das Thema beim Kunden zieht nach.</p></div>');
+  t.push('<div><div class="umschalter" id="filter" role="group" aria-label="Filter"><span class="gleiter" aria-hidden="true"></span>' +
+    [["mir", "Bei mir"], ["kunde", "Wartet auf Kunden"], ["fertig", "Erledigt"]].map(function (o) {
+      return '<button type="button" data-filter="' + o[0] + '" aria-pressed="' + (f === o[0]) + '">' + o[1] + "</button>";
+    }).join("") + "</div></div>");
+  var gezeigt = 0;
+  S.aufgaben.forEach(function (a) {
+    var k = kundeVon(a.kunde);
+    var ps = a.punkte.filter(function (p) { return f === "fertig" ? p.fertig : (!p.fertig && p.art === f) || (p.fertig && S.geradeAb && S.geradeAb[p.id]); });
+    if (!ps.length) { return; }
+    gezeigt += 1;
+    t.push('<article class="aufgabe"><div class="aufgabe-kopf"><button type="button" data-kunde="' + k.id + '">' + esc(a.titel) + '</button></div><p class="notiz">' + esc(a.notiz) + '</p><ul class="punkte">');
+    ps.forEach(function (p) {
+      var th = p.thema ? k.themen.filter(function (x) { return x.id === p.thema; })[0] : null;
+      var faellig = p.art === "kunde" && !p.fertig && p.wieder && p.wieder <= HEUTE;
+      t.push('<li><button type="button" class="haken" role="checkbox" aria-checked="' + !!p.fertig + '" data-ab="' + a.id + "|" + p.id + '" aria-label="' + esc(p.t) + '">' + HAKEN_SVG + "</button><span>" +
+        '<span class="pt">' + esc(p.t) + (th ? '<span class="tag">' + esc(th.name) + "</span>" : "") + "</span>" +
+        (faellig ? '<br><span class="pn faellig">Wiedervorlage seit ' + datumKurz(p.wieder) + ", seit " + tageZwischen(p.seit, HEUTE) + " Tagen offen</span>" : p.notiz ? '<br><span class="pn">' + esc(p.notiz) + "</span>" : "") +
+        (p.schritte && !p.fertig ? '<span class="ablauf">' + p.schritte.map(esc).join(" · ") + "</span>" : "") +
+        "</span></li>");
+    });
+    t.push("</ul></article>");
+  });
+  if (!gezeigt) { t.push('<p class="leer">Hier ist gerade nichts.</p>'); }
+  t.push("</div>");
+  return t.join("");
+}
+
+function filterGleiter() {
+  var g = document.getElementById("filter"); if (!g) { return; }
+  var akt = g.querySelector('[aria-pressed="true"]'), gl = g.querySelector(".gleiter");
+  gl.style.left = akt.offsetLeft + "px"; gl.style.width = akt.offsetWidth + "px";
+}
+
+/* ---------- Ereignisse ---------- */
+var toastZeit;
+function toast(text) {
+  var el = document.getElementById("toast"); el.textContent = text; el.classList.add("da");
+  clearTimeout(toastZeit); toastZeit = setTimeout(function () { el.classList.remove("da"); }, 2600);
+}
+
+document.addEventListener("click", function (e) {
+  var b = e.target.closest("button"); if (!b) { return; }
+  var d = b.dataset;
+  if (b.id === "entwurf-knopf") {
+    var box = document.getElementById("entwurf-text"); box.hidden = !box.hidden; b.setAttribute("aria-expanded", String(!box.hidden)); return;
+  }
+  document.getElementById("entwurf-text").hidden = true;
+  if (d.geh) { S.geradeAb = null; go(d.geh); return; }
+  if (d.kunde) { go("kunde", d.kunde); return; }
+  if (d.nachbereiten) { starteNach(d.nachbereiten); return; }
+  if (b.id === "kundensicht") { S.kundensicht = !S.kundensicht; render(false); return; }
+  if (d.auf) { S.offen[d.auf] = !S.offen[d.auf]; render(false); return; }
+  if (d.filter) { S.filter = d.filter; S.geradeAb = null; render(false); filterGleiter(); return; }
+  if (d.ab) {
+    var teile = d.ab.split("|");
+    var an = b.getAttribute("aria-checked") !== "true";
+    var r = abhaken(S, teile[0], teile[1], an, HEUTE);
+    b.setAttribute("aria-checked", String(an));
+    S.geradeAb = S.geradeAb || {}; S.geradeAb[teile[1]] = an;
+    if (r && an && r.thema) { toast(r.thema.name + " bei " + r.kunde.vorname + ": " + STAND[r.thema.stand].kurz); }
+    else if (r && an) { toast("Im Verlauf von " + r.kunde.vorname); }
+    kopf();
+    return;
+  }
+  /* Nachbereiten */
+  if (b.id === "beispiel-mitschrift") { S.nb.mitschrift = BEISPIEL_MITSCHRIFT; document.getElementById("mitschrift").value = BEISPIEL_MITSCHRIFT; return; }
+  if (d.weiter !== undefined) { weiter(+d.weiter); return; }
+  if (d.oeffne !== undefined) { S.nb.offen = +d.oeffne; render(false); var z = app.querySelector('[data-frage="' + d.oeffne + '"]'); if (z) { z.scrollIntoView({ block: "nearest", behavior: "smooth" }); } return; }
+  if (d.themaWahl !== undefined) { var th = S.nb.themen[+d.themaWahl]; th.gewaehlt = !th.gewaehlt; themenFragenZuruecksetzen(); S.nb.aufgabe = null; render(false); return; }
+  if (d.themaNeu) {
+    var w = WIKI[d.themaNeu];
+    var nt = { key: "h" + d.themaNeu, wiki: d.themaNeu, name: w.name, quelle: "hand", zitat: "", stand: w.fertigImTermin ? "erledigt" : "mir", gewaehlt: true };
+    nt.was = vorschlagWas(nt); S.nb.themen.push(nt); themenFragenZuruecksetzen(); S.nb.aufgabe = null; render(false); return;
+  }
+  if (b.id === "eigenes-dazu") { eigenesThema(); return; }
+  if (d.stand) {
+    var t2 = nbGewaehlt()[+d.i]; t2.stand = d.stand; t2.was = vorschlagWas({ wiki: t2.wiki, stand: d.stand, was: t2.quelle === "claude" && d.stand === "kunde" ? t2.name + " schicken" : null });
+    S.nb.aufgabe = null; render(false); return;
+  }
+  if (d.punktAn !== undefined) {
+    var p = S.nb.aufgabe.punkte[+d.punktAn]; p.an = p.an === false; render(false); return;
+  }
+  if (b.id === "mail-kopieren") {
+    var feld = document.getElementById("mailtext");
+    var fertig = function () { toast("Mailtext kopiert"); };
+    try { navigator.clipboard.writeText(feld.value).then(fertig, function () { feld.select(); }); } catch (err) { feld.select(); }
+    return;
+  }
+  if (b.id === "uebernehmen") {
+    var nb = S.nb, gew = nbGewaehlt();
+    var erg = uebernehmen(S, nb.kunde, nb.termin, gew, nb.aufgabe);
+    var k = kundeVon(nb.kunde);
+    S.nb = null;
+    k.themen.forEach(function (th) { S.offen[th.id] = false; });
+    go("kunde", k.id);
+    S.neu = erg.neu.verlauf.concat(erg.neu.themen);
+    render(false);
+    toast(erg.punkte ? "In Klar: " + erg.punkte + " Punkte bei " + k.name : "Nachbereitet");
+    return;
+  }
+});
+
+function eigenesThema() {
+  var f = document.getElementById("eigenes-thema"); var n = f.value.trim(); if (!n) { return; }
+  var nt = { key: "e" + n, wiki: null, name: n, quelle: "hand", zitat: "", stand: "mir", gewaehlt: true };
+  nt.was = vorschlagWas(nt); S.nb.themen.push(nt); themenFragenZuruecksetzen(); S.nb.aufgabe = null; render(false);
+  var neu = document.getElementById("eigenes-thema"); if (neu) { neu.focus(); }
+}
+
+document.addEventListener("input", function (e) {
+  var el = e.target;
+  if (el.id === "mitschrift") { S.nb.mitschrift = el.value; }
+  if (el.id === "mailtext") { S.nb.mail = el.value; S.nb.mailEigen = true; mailHoehe(); }
+  if (el.dataset.was !== undefined) { nbGewaehlt()[+el.dataset.was].was = el.value; S.nb.aufgabe = null; }
+});
+document.addEventListener("keydown", function (e) {
+  if (e.key !== "Enter") { return; }
+  var el = e.target;
+  if (el.id === "eigenes-thema") { e.preventDefault(); eigenesThema(); return; }
+  if (el.dataset && el.dataset.was !== undefined) { e.preventDefault(); weiter(2 + +el.dataset.was); }
+});
+window.addEventListener("resize", function () { kopf(); filterGleiter(); });
+
+render(true);
+if (document.fonts && document.fonts.ready) { document.fonts.ready.then(function () { kopf(); filterGleiter(); }); }
+</script>
+</body>
+</html>

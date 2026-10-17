@@ -1,0 +1,13 @@
+node_modules/
+test-results/
+playwright-report/
+.DS_Store
+
+# Öffentliches Repo: nie Kundendaten, Mitschriften oder Exporte
+*.xlsx
+*.xls
+*.csv
+*.pdf
+*.docx
+daten/
+ausgabe/

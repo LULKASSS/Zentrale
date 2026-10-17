@@ -1,0 +1,16 @@
+{
+  "name": "zentrale",
+  "version": "0.1.0",
+  "description": "Zentrale: Kunden, Themen und Aufgaben aus der Beratung an einer Stelle",
+  "private": true,
+  "author": "Lukas Rückborn",
+  "scripts": {
+    "dev": "node scripts/serve.mjs",
+    "check": "node scripts/check.mjs",
+    "test": "node scripts/check.mjs && playwright test",
+    "artefakt": "node scripts/artefakt.mjs"
+  },
+  "devDependencies": {
+    "@playwright/test": "1.64.1"
+  }
+}
