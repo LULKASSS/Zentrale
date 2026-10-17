@@ -34,6 +34,9 @@
   --topf-vers:#B9A8F3; --topf-vers-ink:#24154F;
   --topf-leben:#D3D3DC; --topf-leben-ink:#2A2A33;
   --topf-spar:#26925F; --topf-spar-ink:#FFFFFF;
+  /* „läuft“ wie in Klar: Ocker */
+  --ocker:#B26B12; --ocker-soft:rgba(178,107,18,.12); --ocker-line:rgba(178,107,18,.5);
+  --prio-hoch:#C8353B; --prio-mittel:#8A6A12;
 }
 @media (prefers-color-scheme: dark) {
   :root:not([data-theme="light"]) {
@@ -50,6 +53,8 @@
     --topf-vers:#5F4FA6; --topf-vers-ink:#EEEEF1;
     --topf-leben:#3A3A44; --topf-leben-ink:#EEEEF1;
     --topf-spar:#3DB67A; --topf-spar-ink:#0B0B0F;
+    --ocker:#E0A04A; --ocker-soft:rgba(224,160,74,.14); --ocker-line:rgba(224,160,74,.5);
+    --prio-hoch:#F2555A; --prio-mittel:#D9B44A;
   }
 }
 :root[data-theme="dark"] {
@@ -66,6 +71,8 @@
   --topf-vers:#5F4FA6; --topf-vers-ink:#EEEEF1;
   --topf-leben:#3A3A44; --topf-leben-ink:#EEEEF1;
   --topf-spar:#3DB67A; --topf-spar-ink:#0B0B0F;
+  --ocker:#E0A04A; --ocker-soft:rgba(224,160,74,.14); --ocker-line:rgba(224,160,74,.5);
+  --prio-hoch:#F2555A; --prio-mittel:#D9B44A;
 }
 
 /* ============ Grundlagen ============ */
@@ -146,6 +153,10 @@ p { margin:0; }
 .haken svg { width:11px; height:11px; stroke:var(--on-accent); stroke-width:2.6; fill:none; stroke-dasharray:20; stroke-dashoffset:20; transition:stroke-dashoffset .35s var(--ease) .05s; }
 .haken[aria-checked="true"] { background:var(--accent); border-color:var(--accent); }
 .haken[aria-checked="true"] svg { stroke-dashoffset:0; }
+.haken[data-st="laeuft"] { border-color:var(--ocker); position:relative; }
+.haken[data-st="laeuft"]::after { content:""; position:absolute; inset:5px; border-radius:50%; background:var(--ocker); }
+.haken[data-st="fertig"] { background:var(--ok-soft); border-color:var(--ok); }
+.haken[data-st="fertig"] svg { stroke:var(--ok); stroke-dashoffset:0; }
 
 .feld {
   width:100%; border:none; border-radius:var(--r-s); background:var(--surface-2); padding:8px 12px; font-size:14px; min-height:38px;
@@ -239,7 +250,6 @@ button.lzeile:hover { background:var(--surface-2); }
 .lzeile .neben { color:var(--fg-3); font-size:12.5px; }
 .lzeile .rechts-spalte { display:flex; flex-direction:column; gap:4px; align-items:flex-end; text-align:right; font-size:12.5px; color:var(--fg-2); }
 .lzeile .draengt { color:var(--gap-ink); }
-.lzeile.mit-haken { grid-template-columns:20px minmax(0, 1fr) auto; }
 .nachbereiten-karte { display:flex; align-items:center; gap:14px; background:var(--accent-soft); border-radius:var(--r); padding:10px 10px 10px 16px; }
 .nachbereiten-karte .was { flex:1; min-width:0; }
 .nachbereiten-karte .was b { font-weight:600; display:block; font-size:14.5px; }
@@ -428,17 +438,111 @@ button.lzeile:hover { background:var(--surface-2); }
 .punkte .pt { font-size:13.5px; }
 .punkte .pn { color:var(--fg-3); font-size:12.5px; }
 .punkte .ablauf { display:block; color:var(--fg-3); font-size:12.5px; margin-top:1px; }
-.punkte .faellig { color:var(--gap-ink); }
 .punkte .tag { display:inline-block; margin-left:6px; font-size:11.5px; color:var(--fg-3); background:var(--surface-2); border-radius:999px; padding:1px 8px; vertical-align:1px; }
-.punkte > li[data-aus="ja"] .pt, .punkte > li[data-fertig="ja"] .pt { color:var(--fg-3); text-decoration:line-through; }
+.punkte > li[data-aus="ja"] .pt { color:var(--fg-3); text-decoration:line-through; }
 .klar-zeile { display:flex; align-items:center; gap:8px; color:var(--fg-3); font-size:13px; white-space:nowrap; }
 .klar-zeile .punkt { width:8px; height:8px; border-radius:50%; background:var(--ok); }
-.aufgabe { background:var(--surface); border-radius:var(--r); box-shadow:var(--shadow); padding:14px 16px; }
-.aufgabe-kopf { display:flex; justify-content:space-between; gap:12px; align-items:baseline; margin-bottom:6px; }
-.aufgabe-kopf button, .aufgabe-kopf b { border:none; background:none; padding:0; font-weight:600; font-size:14.5px; text-align:left; }
-.aufgabe-kopf button:hover { color:var(--accent-ink); }
-.aufgabe .notiz { color:var(--fg-3); font-size:12.5px; margin-bottom:6px; }
 .neuer-punkt { display:flex; gap:8px; margin-top:12px; }
+
+/* Aufgaben wie in Klar */
+.a-karte { max-width:820px; display:flex; flex-direction:column; gap:14px; }
+.a-kopf { display:flex; align-items:center; gap:10px; flex-wrap:wrap; }
+.a-aktionen { margin-left:auto; display:flex; gap:8px; }
+.a-status { font-size:12px; font-weight:500; height:22px; padding:0 9px; border-radius:999px; display:inline-flex; align-items:center; background:var(--surface-2); color:var(--fg-2); }
+.a-status[data-s="laeuft"] { background:var(--ocker-soft); color:var(--ocker); }
+.a-status[data-s="erledigt"] { background:var(--ok-soft); color:var(--ok-ink); }
+.a-titel { border:none; background:none; font-size:18px; font-weight:600; letter-spacing:-.01em; padding:2px 0; width:100%; border-radius:6px; }
+.a-titel:focus { outline:none; box-shadow:0 0 0 2px var(--accent-soft); }
+.a-akte { align-self:flex-start; margin-top:-8px; }
+.a-feld { display:flex; flex-direction:column; gap:6px; min-width:0; }
+.a-feld > .beschriftung b { color:var(--fg-2); font-weight:600; margin-left:4px; }
+.a-zeile { display:grid; grid-template-columns:minmax(0, 1fr) minmax(0, 1fr); gap:12px; }
+.a-unterzeile { display:flex; flex-wrap:wrap; align-items:center; gap:8px 12px; margin-top:4px; }
+.umschalter.breit { display:flex; width:100%; }
+.umschalter.breit button { flex:1; justify-content:center; }
+.klein-feld { min-height:34px; padding:5px 10px; font-size:13.5px; max-width:220px; }
+.klein-feld.ueber { color:var(--gap-ink); font-weight:600; }
+.prio { display:flex; gap:6px; }
+.prio button { flex:1; height:32px; border-radius:var(--r-s); border:1.5px solid var(--line); background:var(--surface-2); font-size:12.5px; font-weight:600; color:var(--fg-3); }
+.prio button[data-prio="1"] { color:var(--prio-hoch); }
+.prio button[data-prio="2"] { color:var(--prio-mittel); }
+.prio button[aria-pressed="true"][data-prio="1"] { border-color:var(--prio-hoch); background:var(--gap-soft); }
+.prio button[aria-pressed="true"][data-prio="2"] { border-color:var(--prio-mittel); background:var(--ocker-soft); }
+.prio button[aria-pressed="true"][data-prio="3"] { border-color:var(--fg-3); background:var(--surface); color:var(--fg-2); }
+
+.kpunkte { list-style:none; margin:0; padding:0; display:flex; flex-direction:column; gap:6px; }
+.kpunkt { background:var(--surface-2); border:1.5px solid transparent; border-radius:12px; padding:8px 10px; }
+.kpunkt[data-st="laeuft"] { background:var(--accent-soft); border-color:var(--accent-line); box-shadow:inset 3px 0 0 var(--ocker); }
+.kpunkte.erledigt .kpunkt { background:transparent; padding:4px 10px; }
+.p-kopf { display:flex; align-items:center; gap:9px; }
+.p-nr { flex:none; min-width:20px; height:20px; padding:0 5px; border-radius:999px; background:var(--accent-soft); color:var(--accent-ink); font-size:11.5px; font-weight:600; display:inline-grid; place-items:center; }
+.kpunkt[data-st="laeuft"] .p-nr { background:var(--accent); color:var(--on-accent); }
+.p-nr.klein { min-width:16px; height:16px; font-size:10.5px; margin-right:2px; }
+.punkt-feld { flex:1; min-width:0; border:none; background:none; font-size:14px; font-weight:500; padding:3px 4px; border-radius:6px; }
+.punkt-feld:focus { outline:none; background:var(--surface); }
+.p-text { flex:1; min-width:0; font-size:13.5px; color:var(--fg-3); text-decoration:line-through; }
+.p-loesung-kurz { margin:2px 0 0 59px; font-size:12.5px; color:var(--fg-3); }
+.kpunkt .tag { font-size:11px; color:var(--fg-3); background:var(--surface); border-radius:999px; padding:1px 8px; white-space:nowrap; }
+.kpunkt .weg { border:none; background:none; color:var(--fg-3); width:22px; height:22px; border-radius:50%; font-size:16px; line-height:1; padding:0; opacity:.5; }
+.kpunkt .weg:hover, .kpunkt .weg:focus-visible { opacity:1; background:var(--surface); }
+.p-zweige { margin:4px 0 0 9px; padding-left:20px; border-left:1.5px solid var(--line-2); display:flex; flex-direction:column; gap:2px; }
+.kpunkt[data-st="laeuft"] .p-zweige { border-left-color:var(--ocker-line); }
+.p-ast { display:grid; grid-template-columns:52px minmax(0, 1fr); gap:8px; align-items:start; }
+.marke-k { font-size:12px; color:var(--fg-3); padding-top:4px; }
+.p-ast.loesung .marke-k { color:var(--ocker); font-weight:500; }
+.p-ast textarea { border:none; background:none; resize:none; font-size:13px; line-height:1.45; padding:3px 4px; border-radius:6px; min-height:24px; overflow:hidden; }
+.p-ast textarea:focus { outline:none; background:var(--surface); }
+.p-warte { display:flex; align-items:center; flex-wrap:wrap; gap:6px 12px; margin:4px 0 0 49px; font-size:12.5px; }
+.p-link { border:none; background:none; padding:0; color:var(--fg-3); font-size:12.5px; text-decoration:underline dotted; text-underline-offset:3px; }
+.wflag { color:var(--fg-2); }
+.wflag[data-dran="true"] { color:var(--gap-ink); font-weight:500; }
+.neupunkt { display:flex; align-items:center; gap:9px; border:1.5px dashed var(--line-2); border-radius:12px; padding:4px 10px; }
+.neupunkt .platz { width:20px; flex:none; }
+.punkt-neu { flex:1; border:none; background:none; font-size:13.5px; padding:6px 4px; }
+.punkt-neu:focus { outline:none; }
+.trenner { display:flex; align-items:center; gap:10px; font-size:12px; color:var(--fg-3); margin:8px 0 2px; }
+.trenner::after { content:""; flex:1; height:1px; background:var(--line); }
+.kverlauf { list-style:none; margin:0; padding:0; display:flex; flex-direction:column; }
+.kverlauf li { display:grid; grid-template-columns:12px minmax(0, 1fr); gap:10px; position:relative; padding-bottom:9px; }
+.kverlauf li::before { content:""; position:absolute; left:4px; top:12px; bottom:0; width:1.5px; background:var(--line); }
+.kverlauf li:last-child::before { display:none; }
+.kverlauf .p { width:9px; height:9px; border-radius:50%; margin-top:4px; background:var(--line-2); }
+.kverlauf li[data-art="hand"] .p { background:var(--accent); }
+.kverlauf .t { font-size:13px; color:var(--fg-3); }
+.kverlauf li[data-art="hand"] .t { color:var(--fg); }
+.kverlauf .t small { display:block; font-size:11.5px; color:var(--fg-3); }
+.fh-ziele { margin-top:4px; }
+.fh-ziele .chip[aria-pressed="true"] .p-nr { background:var(--on-accent); color:var(--accent); }
+.fh-text { min-height:56px; }
+.a-fuss { margin-top:-4px; }
+
+/* Aufgabenliste wie in Klar */
+.kgruppe { background:var(--surface); border-radius:var(--r); box-shadow:var(--shadow); overflow:hidden; }
+.kgruppe[data-art="dringend"] { box-shadow:inset 0 3px 0 var(--gap), var(--shadow); background:linear-gradient(var(--gap-soft), transparent 46px), var(--surface); }
+.kg-kopf { display:flex; align-items:baseline; gap:10px; padding:12px 16px 6px; font-weight:600; font-size:14px; }
+.kg-kopf b { font-size:20px; letter-spacing:-.02em; }
+.kgruppe[data-art="dringend"] .kg-kopf b { color:var(--gap-ink); }
+.kzeile { display:grid; grid-template-columns:20px minmax(0, 1fr) auto; gap:10px; align-items:center; padding:7px 16px; border-top:1px solid var(--line); }
+.kg-kopf + .kzeile { border-top:none; }
+.kz-text { border:none; background:none; padding:2px 0; text-align:left; display:flex; flex-direction:column; min-width:0; }
+.kz-titel { font-size:14px; font-weight:500; }
+.kz-unter { font-size:12.5px; color:var(--fg-3); overflow:hidden; text-overflow:ellipsis; white-space:nowrap; display:flex; align-items:center; gap:6px; }
+.laeuft-punkt { width:7px; height:7px; border-radius:50%; background:var(--ocker); flex:none; }
+.kz-rechts { display:flex; align-items:center; gap:12px; font-size:12px; color:var(--fg-3); }
+.kz-rechts .flag { font-weight:600; }
+.kzeile[data-erledigt="true"] .kz-titel { color:var(--fg-3); text-decoration:line-through; }
+.erledigt-gruppe summary { padding:12px 16px; font-size:13px; color:var(--fg-2); cursor:pointer; }
+.draengt { color:var(--gap-ink); }
+
+/* Das Blatt rechts */
+#blatt { position:fixed; inset:0; z-index:40; }
+.blatt-hinter { position:absolute; inset:0; background:rgba(12,12,20,.32); animation:hinter-rein .25s ease both; }
+@keyframes hinter-rein { from { opacity:0; } }
+.blatt-flaeche { position:absolute; top:0; right:0; bottom:0; width:min(580px, 100%); background:var(--surface); box-shadow:var(--shadow); overflow-y:auto;
+  padding:14px max(18px, env(safe-area-inset-right, 0px)) 40px 18px; display:flex; flex-direction:column; gap:14px; animation:blatt-rein .33s var(--ease) both; }
+@keyframes blatt-rein { from { transform:translateX(40px); opacity:.001; } }
+.blatt-flaeche .a-kopf { position:sticky; top:-14px; z-index:2; background:var(--surface); margin:-14px -18px 0; padding:12px 18px 10px; border-bottom:1px solid var(--line); }
+html[data-blatt] body { overflow:hidden; }
 
 /* ============ Handy ============ */
 @media (max-width: 860px) {
@@ -456,14 +560,17 @@ button.lzeile:hover { background:var(--surface-2); }
   .karte, .frage-innen { padding:14px; }
   .fin-gruppen { grid-template-columns:minmax(0, 1fr); }
   .lzeile { grid-template-columns:minmax(0, 1fr); padding:10px 14px; }
-  .lzeile.mit-haken { grid-template-columns:20px minmax(0, 1fr); }
   .thema-kopf { grid-template-columns:minmax(0, 1fr) auto; gap:2px 10px; padding:9px 14px; }
   .thema-kopf .twas { grid-column:1; grid-row:2; white-space:normal; }
   .thema-kopf .stand { grid-column:2; grid-row:1; }
   .thema-kopf .wann { grid-column:2; grid-row:2; text-align:right; }
   .thema-innen { padding:2px 14px 12px; }
+  .a-zeile { grid-template-columns:minmax(0, 1fr); }
+  .p-warte { margin-left:0; }
+  .p-ast { grid-template-columns:44px minmax(0, 1fr); }
+  .blatt-flaeche { padding-left:max(14px, env(safe-area-inset-left, 0px)); }
+  .kz-rechts { flex-direction:column; align-items:flex-end; gap:2px; }
   .lzeile .rechts-spalte { align-items:flex-start; text-align:left; }
-  .lzeile.mit-haken .rechts-spalte { grid-column:2; }
   .akte-kopf h1, .ansage h1, .nach .titel h1 { font-size:22px; }
   .wahl { grid-template-columns:repeat(2, minmax(0, 1fr)); }
   .nachbereiten-karte { flex-direction:column; align-items:stretch; }
@@ -472,8 +579,7 @@ button.lzeile:hover { background:var(--surface-2); }
   .formular { grid-template-columns:minmax(0, 1fr); }
   .posten { grid-template-columns:minmax(0, 1fr) 104px 22px; }
   .grosse-zahl { font-size:32px; }
-  .aufgabe { padding:12px 14px; }
-}
+  }
 </style>
 </head>
 <body>
@@ -497,6 +603,7 @@ button.lzeile:hover { background:var(--surface-2); }
   </div>
 </header>
 <main class="wrap" id="app"></main>
+<div id="blatt" hidden></div>
 <div class="toast" id="toast" role="status" aria-live="polite"></div>
 
 <script id="kern">
@@ -745,18 +852,40 @@ function beispielStand() {
   ];
   function thId(k, n) { return k.themen.filter(function (t) { return t.name === n; })[0].id; }
   var b = kunden[1], p = kunden[2];
+  function kp(t, st, extra) {
+    var pk = { id: neueId("p"), t: t, ok: st === "fertig", st: st, loesung: null, notiz: null, warten: null, art: "mir" };
+    Object.keys(extra || {}).forEach(function (x) { pk[x] = extra[x]; });
+    return pk;
+  }
+  function ka(kunde, titel, erstellt, notiz, punkte, verlauf) {
+    return { id: neueId("a"), titel: titel, cluster: "Kunden", prio: 2, faellig: null, status: "offen", erstellt: erstellt, erledigtAm: "",
+      notiz: notiz, punkte: punkte, wiederholung: null, laeuft: false, warten: null, vorlage: null, kunde: kunde,
+      verlauf: verlauf.map(function (v) { var e = { id: neueId("v"), am: v[0], text: v[1], art: v[2] || "auto", quelle: v[3] || null }; if (v[4]) { e.pid = v[4]; } return e; }) };
+  }
+  var avPunkt = kp("Altersvorsorge: Vorschlag vorbereiten", "fertig", { thema: thId(b, "Altersvorsorge"), notiz: "Ablauf (Wiki): " + WIKI.altersvorsorge.schritte.join(" · "),
+    loesung: "Rentenlücke im Investmentrechner gezeigt, Vorschlag mit zwei Varianten geschickt", fertigAm: "2026-10-06T07:30:00.000Z" });
+  var buPunkt = kp("Gesundheitsfragen klären", "offen", { thema: thId(b, "BU"), art: "kunde", warten: { art: "kunde", seit: "2026-10-02", nachgefragt: ["2026-10-06"] } });
+  var kfzPunkt = kp("Fahrzeugschein schicken", "offen", { thema: thId(p, "Kfz"), art: "kunde", warten: { art: "kunde", seit: "2026-09-25", nachgefragt: ["2026-09-28", "2026-10-02"] } });
   var aufgaben = [
-    { id: neueId("a"), kunde: "beispiel", titel: "@Jonas und Mira Beispiel", notiz: "Update-Termin 02.10.2026: Altersvorsorge, BU, Kfz.", punkte: [
-      { id: neueId("p"), t: "Altersvorsorge: Vorschlag vorbereiten", thema: thId(b, "Altersvorsorge"), art: "mir", fertig: true, schritte: WIKI.altersvorsorge.schritte, quelle: WIKI.altersvorsorge.ablauf },
-      { id: neueId("p"), t: "Mail gegenlesen lassen", thema: null, art: "mir", fertig: true, intern: true },
-      { id: neueId("p"), t: "Mail verschicken", thema: null, art: "mir", fertig: true, verlaufText: "Mail mit den nächsten Schritten verschickt" },
-      { id: neueId("p"), t: "Wartet auf Jonas und Mira: Gesundheitsfragen klären", thema: thId(b, "BU"), art: "kunde", fertig: false, seit: "2026-10-02", wieder: "2026-10-09" },
-      { id: neueId("p"), t: "Termin vereinbaren", thema: null, art: "mir", fertig: false, notiz: "Für Kfz, bis Ende November", verlaufText: "Nächsten Termin vereinbart" }
-    ] },
-    { id: neueId("a"), kunde: "probe", titel: "@Tom Probe", notiz: "Update-Termin 25.09.2026: Hausrat, Kfz, Haftpflicht.", punkte: [
-      { id: neueId("p"), t: "Hausrat: Vertrag vergleichen", thema: thId(p, "Hausrat"), art: "mir", fertig: false, schritte: WIKI.hausrat.schritte, quelle: WIKI.hausrat.ablauf },
-      { id: neueId("p"), t: "Wartet auf Tom: Fahrzeugschein schicken", thema: thId(p, "Kfz"), art: "kunde", fertig: false, seit: "2026-09-25", wieder: "2026-10-02" }
-    ] }
+    ka("beispiel", "@Jonas und Mira Beispiel", "2026-10-02T12:10:00.000Z", "Update-Termin 02.10.2026: Altersvorsorge, BU, Kfz.", [
+      avPunkt,
+      kp("Mail gegenlesen lassen", "fertig", { intern: true }),
+      kp("Mail verschicken", "fertig", { kundeText: "Mail mit den nächsten Schritten verschickt" }),
+      buPunkt,
+      kp("Termin vereinbaren", "offen", { notiz: "Für Kfz, bis Ende November", kundeText: "Nächsten Termin vereinbart" })
+    ], [
+      ["2026-10-02T12:10:00.000Z", "Aus der Zentrale: Update-Termin 02.10.2026 nachbereitet, 5 Punkte.", "auto", "zentrale"],
+      ["2026-10-06T07:30:00.000Z", "Altersvorsorge: Vorschlag vorbereiten — erledigt. Lösung: Rentenlücke im Investmentrechner gezeigt, Vorschlag mit zwei Varianten geschickt", "auto", "punkt:Altersvorsorge: Vorschlag vorbereiten", avPunkt.id],
+      ["2026-10-06T08:05:00.000Z", "Mail verschicken — erledigt.", "auto", "punkt:Mail verschicken"],
+      ["2026-10-06T14:20:00.000Z", "Mira angerufen: Sie meldet sich nach dem Arzttermin mit den Gesundheitsfragen.", "hand", null, buPunkt.id]
+    ]),
+    ka("probe", "@Tom Probe", "2026-09-25T15:00:00.000Z", "Update-Termin 25.09.2026: Hausrat, Kfz, Haftpflicht.", [
+      kp("Hausrat: Vertrag vergleichen", "offen", { thema: thId(p, "Hausrat"), notiz: "Ablauf (Wiki): " + WIKI.hausrat.schritte.join(" · ") }),
+      kfzPunkt
+    ], [
+      ["2026-09-25T15:00:00.000Z", "Aus der Zentrale: Update-Termin 25.09.2026 nachbereitet, 2 Punkte.", "auto", "zentrale"],
+      ["2026-10-02T09:10:00.000Z", "Tom per WhatsApp an den Fahrzeugschein erinnert.", "hand", null, kfzPunkt.id]
+    ])
   ];
   return { kunden: kunden, aufgaben: aufgaben };
 }
@@ -809,7 +938,7 @@ function baueAufgabe(k, termin, themen) {
     if (t.stand === "mir") {
       punkte.push({ key: "mir-" + t.key, t: t.name + ": " + t.was, thema: t.key, art: "mir", schritte: w ? w.schritte : null, quelle: w ? w.ablauf : null });
     } else if (t.stand === "kunde") {
-      punkte.push({ key: "kunde-" + t.key, t: "Wartet auf " + k.vorname + ": " + t.was, thema: t.key, art: "kunde", notiz: "Wiedervorlage " + datum(plusTage(termin.d, 7)) });
+      punkte.push({ key: "kunde-" + t.key, t: t.was, thema: t.key, art: "kunde", wartetAuf: k.vorname });
     }
   });
   var naechstes = themen.filter(function (t) { return t.stand === "naechstes"; });
@@ -881,19 +1010,65 @@ function uebernehmen(S, kundeId, terminId, themen, aufgabe) {
   termin.ergebnis = themen.map(function (t) { return { name: t.name, stand: t.stand }; });
   var v = { id: neueId("v"), d: termin.d, art: "termin", text: termin.art, themen: themen.map(function (t) { return t.name; }).join(", ") };
   k.verlauf.push(v); neu.verlauf.push(v.id);
+  var am = termin.d + "T" + (termin.d === HEUTE ? jetztUhr() : "18:00:00.000Z");
   var punkte = aufgabe.punkte.filter(function (p) { return p.an !== false; }).map(function (p) {
-    return { id: neueId("p"), t: p.t, notiz: p.notiz, thema: p.thema ? themaId[p.thema] : null, art: p.art, fertig: false,
-      schritte: p.schritte, quelle: p.quelle, intern: p.intern, verlaufText: p.verlaufText,
-      seit: p.art === "kunde" ? termin.d : undefined, wieder: p.art === "kunde" ? plusTage(termin.d, 7) : undefined };
+    var notiz = [p.notiz, p.schritte ? "Ablauf (Wiki): " + p.schritte.join(" · ") : null].filter(Boolean).join("\n") || null;
+    return neuerKlarPunkt(p.t, { notiz: notiz, thema: p.thema ? themaId[p.thema] : null, art: p.art, intern: !!p.intern, kundeText: p.verlaufText || null,
+      warten: p.art === "kunde" ? { art: "kunde", seit: termin.d, nachgefragt: [] } : null });
   });
-  var alt = S.aufgaben.filter(function (a) { return a.kunde === kundeId; })[0];
-  if (alt) { alt.notiz = aufgabe.notiz; alt.punkte = alt.punkte.concat(punkte); }
-  else if (punkte.length) { S.aufgaben.push({ id: neueId("a"), kunde: kundeId, titel: aufgabe.titel, notiz: aufgabe.notiz, punkte: punkte }); }
+  var a = S.aufgaben.filter(function (x) { return x.kunde === kundeId; })[0];
   if (punkte.length) {
+    if (!a) { a = neueKlarAufgabe(k, am); S.aufgaben.push(a); }
+    if (a.status === "erledigt") { a.status = "offen"; a.erledigtAm = ""; }
+    a.notiz = [a.notiz, aufgabe.notiz].filter(Boolean).join("\n");
+    a.punkte = a.punkte.concat(punkte);
+    verlaufDazu(a, "Aus der Zentrale: " + termin.art + " " + datum(termin.d) + " nachbereitet, " + punkte.length + " Punkte.", "auto", "zentrale", null, am);
     var kv = { id: neueId("v"), d: termin.d, art: "notiz", text: "In Klar übernommen: " + punkte.length + " Punkte", intern: true };
     k.verlauf.push(kv); neu.verlauf.push(kv.id);
   }
   return { neu: neu, punkte: punkte.length };
+}
+
+/* ===== Aufgaben in Klars Form =====
+   Aufgabe {id, titel, cluster, prio, faellig, status, erstellt, erledigtAm, notiz, punkte, verlauf, wiederholung,
+   laeuft, warten, vorlage}, Punkt {id, t, ok, st (offen|laeuft|fertig), loesung, notiz, warten {art, seit, nachgefragt}}.
+   Dazu, was nur die Zentrale braucht und Klar stehen lässt: aufgabe.kunde, punkt.thema, punkt.art, punkt.kundeText, punkt.intern. */
+var PSTAND = ["offen", "laeuft", "fertig"];
+var WARTE_ARTEN = { kunde: "Kunde", versicherer: "Versicherer", intern: "Intern" };
+var RHYTHMUS = [3, 7, 14, 21];
+function jetztUhr() { return new Date().toISOString().slice(11); }
+function jetztIso() { return HEUTE + "T" + jetztUhr(); }
+function punktStand(p) { return PSTAND.indexOf(p.st) >= 0 ? p.st : (p.ok ? "fertig" : "offen"); }
+function verlaufDazu(a, text, art, quelle, pid, am) {
+  var e = { id: neueId("v"), am: am || jetztIso(), text: String(text), art: art || "hand", quelle: quelle || null };
+  if (pid) { e.pid = pid; }
+  a.verlauf = a.verlauf || []; a.verlauf.push(e);
+  return e;
+}
+function neueKlarAufgabe(k, am) {
+  var a = { id: neueId("a"), titel: "@" + k.name, cluster: "Kunden", prio: 2, faellig: null, status: "offen", erstellt: am || jetztIso(), erledigtAm: "",
+    notiz: "", punkte: [], verlauf: [], wiederholung: null, laeuft: false, warten: null, vorlage: null, kunde: k.id };
+  verlaufDazu(a, "Aufgabe angelegt.", "auto", null, null, a.erstellt);
+  return a;
+}
+function neuerKlarPunkt(t, extra) {
+  var p = { id: neueId("p"), t: String(t), ok: false, st: "offen", loesung: null, notiz: null, warten: null, art: "mir" };
+  Object.keys(extra || {}).forEach(function (x) { if (extra[x] !== undefined) { p[x] = extra[x]; } });
+  return p;
+}
+/* Wann nachfragen: wie in Klar nach 3, 7, 14, 21 Tagen. */
+function lageWarten(w, heute) {
+  var ng = w.nachgefragt || [], n = ng.length, naechst;
+  if (n === 0) { naechst = plusTage(w.seit, RHYTHMUS[0]); }
+  else { naechst = plusTage(ng[n - 1], (RHYTHMUS[Math.min(n, 3)] - RHYTHMUS[Math.min(n - 1, 3)]) || 7); }
+  return { alter: tageZwischen(w.seit, heute), naechst: naechst, dran: naechst <= heute, n: n };
+}
+function finde(S, aid, pid) {
+  var a = S.aufgaben.filter(function (x) { return x.id === aid; })[0];
+  var p = a && pid ? a.punkte.filter(function (x) { return x.id === pid; })[0] : null;
+  var k = a ? S.kunden.filter(function (x) { return x.id === a.kunde; })[0] : null;
+  var th = p && p.thema && k ? k.themen.filter(function (t) { return t.id === p.thema; })[0] : null;
+  return { a: a, p: p, k: k, th: th };
 }
 
 /* Eigener Punkt für einen Kunden, außerhalb eines Termins (landet in derselben Klar-Aufgabe). */
@@ -901,10 +1076,104 @@ function neuerPunkt(S, kundeId, text) {
   var t = String(text || "").trim(); if (!t) { return null; }
   var k = S.kunden.filter(function (x) { return x.id === kundeId; })[0];
   var a = S.aufgaben.filter(function (x) { return x.kunde === kundeId; })[0];
-  if (!a) { a = { id: neueId("a"), kunde: kundeId, titel: "@" + k.name, notiz: "", punkte: [] }; S.aufgaben.push(a); }
-  var p = { id: neueId("p"), t: t, thema: null, art: "mir", fertig: false, verlaufText: t + ": erledigt" };
+  if (!a) { a = neueKlarAufgabe(k); S.aufgaben.push(a); }
+  if (a.status === "erledigt") { a.status = "offen"; a.erledigtAm = ""; }
+  var p = neuerKlarPunkt(t, { kundeText: t + ": erledigt" });
   a.punkte.push(p);
   return p;
+}
+
+function punktFertigText(p) { return p.t + " — erledigt." + (p.loesung ? " Lösung: " + p.loesung : ""); }
+
+/* Ein Punkt wechselt den Stand (Haken antippen: offen → läuft → erledigt → offen, wie in Klar).
+   Erledigt schreibt den Verlauf der Aufgabe, den Faden des Themas und den Verlauf beim Kunden fort;
+   zurückgenommen wird alles wieder entfernt. */
+function setzePunktStand(S, aid, pid, st, am) {
+  var f = finde(S, aid, pid), a = f.a, p = f.p, k = f.k, th = f.th;
+  var vorher = punktStand(p);
+  if (vorher === st) { return null; }
+  am = am || jetztIso();
+  var heute = am.slice(0, 10);
+  if (vorher === "fertig") {
+    if (th && p.vorher) { th.stand = p.vorher.stand; th.was = p.vorher.was; }
+    (p.spur || []).forEach(function (s) {
+      if (s.wo === "faden" && th) { th.faden = th.faden.filter(function (x) { return x.id !== s.id; }); }
+      if (s.wo === "verlauf") { k.verlauf = k.verlauf.filter(function (x) { return x.id !== s.id; }); }
+      if (s.wo === "aufgabe") { a.verlauf = a.verlauf.filter(function (x) { return x.id !== s.id; }); }
+    });
+    p.spur = []; p.vorher = null; p.fertigAm = null;
+    if (p.wartenVorher) { p.warten = p.wartenVorher; p.wartenVorher = null; }
+  }
+  p.st = st; p.ok = st === "fertig";
+  if (st === "laeuft") { verlaufDazu(a, p.t + " — angefangen.", "auto", "punkt:" + p.t, p.id, am); }
+  if (st === "fertig") {
+    p.fertigAm = am; p.spur = []; p.vorher = th ? { stand: th.stand, was: th.was } : null;
+    if (p.warten) { p.wartenVorher = p.warten; p.warten = null; }
+    var e = verlaufDazu(a, punktFertigText(p), "auto", "punkt:" + p.t, p.id, am); e.pfertig = true;
+    p.spur.push({ wo: "aufgabe", id: e.id });
+    if (th) {
+      var w = th.wiki ? WIKI[th.wiki] : null, nachher = null, text = null;
+      if (p.art === "kunde") {
+        nachher = (w && w.nachKunde) || { stand: "erledigt", was: "Erledigt" };
+        text = p.t + ": erledigt";
+      } else {
+        var offen = a.punkte.filter(function (x) { return x.thema === p.thema && x.art !== "kunde" && punktStand(x) !== "fertig"; }).length;
+        if (!offen) { nachher = (w && w.danach) || { stand: "erledigt", was: "Erledigt" }; text = (w && w.danach && w.danach.text) || p.t; }
+      }
+      if (nachher) {
+        th.stand = nachher.stand; th.was = nachher.was;
+        var fd = { id: neueId("f"), d: heute, text: text };
+        th.faden.push(fd); p.spur.push({ wo: "faden", id: fd.id });
+      }
+    }
+    if (p.kundeText || th) {
+      var v = { id: neueId("v"), d: heute, art: "erledigt", text: p.kundeText || p.t + ": erledigt", intern: !!p.intern };
+      k.verlauf.push(v); p.spur.push({ wo: "verlauf", id: v.id });
+    }
+  }
+  return { kunde: k, thema: th, aufgabe: a, punkt: p };
+}
+function naechsterPunktStand(p) { return PSTAND[(PSTAND.indexOf(punktStand(p)) + 1) % 3]; }
+
+/* Warten auf jemanden (am Punkt), nachfragen, Antwort kam. */
+function warteAuf(S, aid, pid, art, heute) {
+  var f = finde(S, aid, pid);
+  f.p.warten = { art: art, seit: heute, nachgefragt: [] };
+  verlaufDazu(f.a, "Wartet auf " + WARTE_ARTEN[art] + ": " + f.p.t, "auto", "warten", f.p.id);
+}
+function nachgefragt(S, aid, pid, heute) {
+  var f = finde(S, aid, pid);
+  if (!f.p.warten) { return; }
+  f.p.warten.nachgefragt.push(heute);
+  verlaufDazu(f.a, "Nachgefragt (" + WARTE_ARTEN[f.p.warten.art] + "): " + f.p.t, "auto", "warten", f.p.id);
+}
+function antwortKam(S, aid, pid, heute) {
+  var f = finde(S, aid, pid), p = f.p, th = f.th;
+  if (!p.warten) { return null; }
+  verlaufDazu(f.a, "Antwort kam (" + WARTE_ARTEN[p.warten.art] + "): " + p.t, "auto", "antwort", p.id);
+  p.warten = null;
+  if (th && th.stand === "kunde") {
+    var w = th.wiki ? WIKI[th.wiki] : null;
+    th.stand = "mir"; th.was = (w && w.nachKunde && w.nachKunde.was) || p.t + ": Antwort da";
+    th.faden.push({ id: neueId("f"), d: heute, text: "Antwort da: " + p.t });
+  }
+  if (p.art === "kunde") { p.art = "mir"; }
+  return f;
+}
+function festhalten(S, aid, text, pid, am) {
+  var t = String(text || "").trim(); if (!t) { return null; }
+  var f = finde(S, aid, pid || null);
+  return verlaufDazu(f.a, t, "hand", null, pid || null, am);
+}
+function aufgabeAbhaken(S, aid, an, am) {
+  var a = finde(S, aid).a;
+  a.status = an ? "erledigt" : "offen"; a.erledigtAm = an ? (am || jetztIso()) : ""; a.laeuft = false;
+  verlaufDazu(a, an ? "Erledigt." : "Wieder offen.", "auto", "status", null, am);
+}
+function aufgabeLaeuft(S, aid, an, am) {
+  var a = finde(S, aid).a;
+  a.laeuft = !!an;
+  verlaufDazu(a, an ? "Angefangen." : "Pausiert.", "auto", "status", null, am);
 }
 
 /* Stand eines Themas von Hand ändern (z. B. im Update-Termin). Schreibt den Faden fort. */
@@ -918,62 +1187,23 @@ function setzeThemaStand(k, themaId, stand, heute) {
   return f;
 }
 
-/* Abhaken (in Klar oder hier – derselbe Punkt). Schreibt den Faden des Themas fort. */
-function abhaken(S, aufgabeId, punktId, an, heute) {
-  var a = S.aufgaben.filter(function (x) { return x.id === aufgabeId; })[0];
-  var p = a.punkte.filter(function (x) { return x.id === punktId; })[0];
-  var k = S.kunden.filter(function (x) { return x.id === a.kunde; })[0];
-  var th = p.thema ? k.themen.filter(function (t) { return t.id === p.thema; })[0] : null;
-  if (an === p.fertig) { return null; }
-  p.fertig = an;
-  if (an) {
-    p.vorher = th ? { stand: th.stand, was: th.was } : null;
-    p.spur = [];
-    if (th) {
-      var w = th.wiki ? WIKI[th.wiki] : null;
-      var nachher = null, text = null;
-      if (p.art === "kunde") {
-        nachher = (w && w.nachKunde) || { stand: "erledigt", was: "Erhalten" };
-        text = p.t.replace(/^Wartet auf [^:]+:\s*/, "") + ": erledigt";
-      } else {
-        var offen = a.punkte.filter(function (x) { return x.thema === p.thema && x.art === "mir" && !x.fertig; }).length;
-        if (!offen) { nachher = (w && w.danach) || { stand: "erledigt", was: "Erledigt" }; text = (w && w.danach && w.danach.text) || p.t; }
-      }
-      if (nachher) {
-        th.stand = nachher.stand; th.was = nachher.was;
-        var f = { id: neueId("f"), d: heute, text: text };
-        th.faden.push(f); p.spur.push({ wo: "faden", id: f.id });
-      }
-    }
-    if (p.verlaufText || th) {
-      var v = { id: neueId("v"), d: heute, art: "erledigt", text: p.verlaufText || p.t.replace(/^Wartet auf [^:]+:\s*/, "") + ": erledigt" };
-      k.verlauf.push(v); p.spur.push({ wo: "verlauf", id: v.id });
-    }
-  } else {
-    if (th && p.vorher) { th.stand = p.vorher.stand; th.was = p.vorher.was; }
-    (p.spur || []).forEach(function (s) {
-      if (s.wo === "faden" && th) { th.faden = th.faden.filter(function (f) { return f.id !== s.id; }); }
-      if (s.wo === "verlauf") { k.verlauf = k.verlauf.filter(function (v) { return v.id !== s.id; }); }
-    });
-    p.spur = []; p.vorher = null;
-  }
-  return { kunde: k, thema: th };
-}
-
 if (typeof module !== "undefined") {
   module.exports = { HEUTE: HEUTE, WIKI: WIKI, STAND: STAND, GRUPPEN: GRUPPEN, BEISPIEL_MITSCHRIFT: BEISPIEL_MITSCHRIFT, beispielStand: beispielStand,
     leseBetrag: leseBetrag, euro: euro, finanzSummen: finanzSummen, neuerKunde: neuerKunde, neuerTermin: neuerTermin, offeneTermine: offeneTermine,
     erkenneThemen: erkenneThemen, vorschlagWas: vorschlagWas, baueAufgabe: baueAufgabe, baueMail: baueMail, uebernehmen: uebernehmen,
-    neuerPunkt: neuerPunkt, setzeThemaStand: setzeThemaStand, abhaken: abhaken };
+    neuerPunkt: neuerPunkt, setzeThemaStand: setzeThemaStand, setzePunktStand: setzePunktStand, naechsterPunktStand: naechsterPunktStand,
+    punktStand: punktStand, lageWarten: lageWarten, warteAuf: warteAuf, nachgefragt: nachgefragt, antwortKam: antwortKam, festhalten: festhalten,
+    aufgabeAbhaken: aufgabeAbhaken, aufgabeLaeuft: aufgabeLaeuft };
 }
 </script>
 
 <script>
 /* Oberfläche: ein Zustand S, eine render(), go(seite) blendet ein. */
-var SPEICHER = "zentrale.entwurf.2";
+var SPEICHER = "zentrale.entwurf.3";
 var S = laden() || beispielStand();
 S.seite = "heute"; S.kunde = null; S.reiter = "ueberblick"; S.termin = null; S.kundensicht = false;
-S.offen = {}; S.filter = "mir"; S.neu = null; S.nb = null; S.blatt = null; S.suche = "";
+S.offen = {}; S.neu = null; S.nb = null; S.blatt = null; S.terminForm = false; S.suche = "";
+S.fhZiel = {}; S.fhText = {}; S.warteWahl = null;
 
 /* Im Entwurf nur im Tab (sessionStorage), damit Ausprobiertes ein Neuladen übersteht. */
 function laden() {
@@ -1006,7 +1236,7 @@ function go(seite, opt) {
   if (opt.reiter) { S.reiter = opt.reiter; }
   if (opt.termin !== undefined) { S.termin = opt.termin; }
   if (seite !== "akte") { S.kundensicht = false; }
-  S.blatt = null; S.geradeAb = null;
+  S.blatt = null; S.terminForm = false; S.warteWahl = null;
   render(true);
   window.scrollTo({ top: 0 });
 }
@@ -1015,8 +1245,10 @@ function render(rein) {
   var html = { heute: seiteHeute, kunden: seiteKunden, neu: seiteNeuerKunde, akte: seiteAkte, termin: seiteTermin, nach: seiteNach, aufgaben: seiteAufgaben }[S.seite]();
   app.innerHTML = '<div class="' + (rein ? "seite" : "") + '">' + html + "</div>";
   kopf();
-  app.querySelectorAll(".umschalter").forEach(gleiter);
   mailHoehe();
+  blattZeichnen();
+  document.querySelectorAll(".umschalter").forEach(gleiter);
+  document.querySelectorAll('[data-auto]').forEach(autoHoehe);
   markenOrdnen();
   speichern();
   S.neu = null;
@@ -1033,9 +1265,10 @@ function mailHoehe() {
   if (m) { m.style.height = "auto"; m.style.height = (m.scrollHeight + 4) + "px"; }
 }
 
+/* Bei mir = offene Punkte offener Aufgaben, auf die nicht gewartet wird. */
 function offenBeiMir() {
   var n = 0;
-  S.aufgaben.forEach(function (a) { a.punkte.forEach(function (p) { if (!p.fertig && p.art === "mir") { n += 1; } }); });
+  S.aufgaben.forEach(function (a) { if (a.status !== "erledigt") { a.punkte.forEach(function (p) { if (punktStand(p) !== "fertig" && !p.warten) { n += 1; } }); } });
   return n;
 }
 
@@ -1048,23 +1281,25 @@ function kopf() {
 }
 
 /* ---------- Heute ---------- */
-function ueberfaellig() {
+/* Punkte, bei denen nachgefragt werden sollte (Rhythmus wie in Klar). */
+function nachfragenListe() {
   var r = [];
   S.aufgaben.forEach(function (a) {
+    if (a.status === "erledigt") { return; }
     a.punkte.forEach(function (p) {
-      if (p.art === "kunde" && p.wieder && p.wieder <= HEUTE && (!p.fertig || (S.geradeAb && S.geradeAb[p.id]))) { r.push({ a: a, p: p, k: kundeVon(a.kunde) }); }
+      if (p.warten && punktStand(p) !== "fertig") { var l = lageWarten(p.warten, HEUTE); if (l.dran) { r.push({ a: a, p: p, k: kundeVon(a.kunde), l: l }); } }
     });
   });
-  return r;
+  return r.sort(function (x, y) { return y.l.alter - x.l.alter; });
 }
 
 function seiteHeute() {
   var t = [], h = new Date(HEUTE + "T12:00:00");
   var offen = [];
   S.kunden.forEach(function (k) { offeneTermine(k).forEach(function (tm) { offen.push({ k: k, tm: tm }); }); });
-  var spaet = ueberfaellig();
+  var spaet = nachfragenListe();
   t.push('<div class="schmal"><div class="ansage"><div><h1>' + WOCHENTAG[h.getDay()] + ", " + h.getDate() + ". " + MONAT[h.getMonth()] + "</h1>");
-  t.push("<p>" + [offen.length + (offen.length === 1 ? " Termin" : " Termine") + " nachbereiten", spaet.filter(function (s) { return !s.p.fertig; }).length + " überfällig", offenBeiMir() + " Punkte bei mir"].join(" · ") + "</p></div></div>");
+  t.push("<p>" + [offen.length + (offen.length === 1 ? " Termin" : " Termine") + " nachbereiten", spaet.length + " nachfragen", offenBeiMir() + " Punkte bei mir"].join(" · ") + "</p></div></div>");
 
   t.push('<section class="abschnitt"><h2>Nachbereiten</h2>');
   if (!offen.length) { t.push('<p class="leer">Alle Termine sind nachbereitet.</p>'); }
@@ -1074,15 +1309,13 @@ function seiteHeute() {
   });
   t.push("</section>");
 
-  t.push('<section class="abschnitt"><h2>Wartet über die Wiedervorlage</h2>');
-  if (!spaet.length) { t.push('<p class="leer">Niemand ist über der Wiedervorlage.</p>'); }
+  t.push('<section class="abschnitt"><h2>Nachfragen</h2>');
+  if (!spaet.length) { t.push('<p class="leer">Gerade muss niemandem hinterhergefragt werden.</p>'); }
   else {
     t.push('<div class="liste">');
     spaet.forEach(function (s) {
-      t.push('<div class="lzeile mit-haken"><button type="button" class="haken" role="checkbox" aria-checked="' + !!s.p.fertig + '" data-ab="' + s.a.id + "|" + s.p.id + '" aria-label="Erhalten: ' + esc(s.p.t) + '">' + HAKEN_SVG + "</button>" +
-        '<span><span class="haupt">' + esc(s.k.name) + '</span><br><span class="neben">' + esc(ohneWartet(s.p.t)) + "</span></span>" +
-        '<span class="rechts-spalte"><span class="draengt">seit ' + tageZwischen(s.p.seit, HEUTE) + " Tagen</span>" +
-        '<button type="button" class="textknopf" data-akte="' + s.k.id + '">Zur Akte</button></span></div>');
+      t.push('<button type="button" class="lzeile" data-blatt-auf="' + s.a.id + '"><span><span class="haupt">' + esc(s.k.name) + '</span><br><span class="neben">' + esc(s.p.t) + " · wartet auf " + esc(WARTE_ARTEN[s.p.warten.art]) +
+        (s.l.n ? " · " + s.l.n + "× nachgefragt" : "") + '</span></span><span class="rechts-spalte"><span class="draengt">seit ' + s.l.alter + " Tagen</span></span></button>");
     });
     t.push("</div>");
   }
@@ -1108,15 +1341,13 @@ function seiteHeute() {
 
 /* ---------- Kunden ---------- */
 function lage(k) {
-  var a = aufgabeVon(k.id);
-  var warten = a ? a.punkte.filter(function (p) { return p.art === "kunde" && !p.fertig; }) : [];
-  var ot = offeneTermine(k)[0];
+  var a = aufgabeVon(k.id), ot = offeneTermine(k)[0];
   if (ot) { return { text: ot.art + " " + wann(ot.d) + ", nicht nachbereitet", draengt: true }; }
-  var alt = warten.filter(function (p) { return p.wieder && p.wieder <= HEUTE; })[0];
-  if (alt) { return { text: "Wartet seit " + tageZwischen(alt.seit, HEUTE) + " Tagen", draengt: true }; }
+  var dran = a && a.status !== "erledigt" ? a.punkte.filter(function (p) { return p.warten && punktStand(p) !== "fertig" && lageWarten(p.warten, HEUTE).dran; })[0] : null;
+  if (dran) { return { text: "Nachfragen, wartet seit " + lageWarten(dran.warten, HEUTE).alter + " Tagen", draengt: true }; }
   var nt = naechsterTermin(k);
   if (nt) { return { text: nt.art + " " + datumKurz(nt.d), draengt: false }; }
-  var mir = a ? a.punkte.filter(function (p) { return p.art === "mir" && !p.fertig; }).length : 0;
+  var mir = a && a.status !== "erledigt" ? a.punkte.filter(function (p) { return punktStand(p) !== "fertig" && !p.warten; }).length : 0;
   return { text: mir ? mir + (mir === 1 ? " Punkt" : " Punkte") + " bei mir" : k.themen.length ? "Nichts offen" : "Neu", draengt: false };
 }
 
@@ -1167,13 +1398,13 @@ function seiteAkte() {
   t.push('<button type="button" class="kundensicht-schalter" id="kundensicht" aria-pressed="' + ks + '"><span class="bahn"></span>Mit ' + esc(k.vorname) + " ansehen</button>");
   if (!ks) { t.push('<button type="button" class="knopf akzent breit-mobil" id="neuer-termin">Neuer Termin</button>'); }
   t.push("</div></div>");
-  if (S.blatt === "termin") { t.push(blattTermin(k)); }
+  if (S.terminForm) { t.push(blattTermin(k)); }
 
   t.push('<div class="reiter-leiste"><div class="umschalter" id="reiter" role="group" aria-label="Akte"><span class="gleiter" aria-hidden="true"></span>');
   REITER.forEach(function (r) {
     if (ks && REITER_KUNDE.indexOf(r[0]) < 0) { return; }
     var zahl = "";
-    if (r[0] === "aufgaben") { var a = aufgabeVon(k.id); var n = a ? a.punkte.filter(function (p) { return !p.fertig; }).length : 0; if (n) { zahl = ' <span class="zahl-klein">' + n + "</span>"; } }
+    if (r[0] === "aufgaben") { var a = aufgabeVon(k.id); var n = a && a.status !== "erledigt" ? a.punkte.filter(function (p) { return punktStand(p) !== "fertig"; }).length : 0; if (n) { zahl = ' <span class="zahl-klein">' + n + "</span>"; } }
     if (r[0] === "termine") { var o = offeneTermine(k).length; if (o) { zahl = ' <span class="zahl-klein">' + o + "</span>"; } }
     t.push('<button type="button" data-reiter="' + r[0] + '" aria-pressed="' + (S.reiter === r[0]) + '">' + r[1] + zahl + "</button>");
   });
@@ -1184,7 +1415,7 @@ function seiteAkte() {
 
 function blattTermin(k) {
   var t = [], vorwahl = k.termine.length ? 1 : 0;
-  t.push('<div class="karte" style="margin-bottom:22px"><div class="karte-kopf"><h2>Neuer Termin</h2><button type="button" class="textknopf" id="blatt-zu">Abbrechen</button></div>');
+  t.push('<div class="karte" style="margin-bottom:22px"><div class="karte-kopf"><h2>Neuer Termin</h2><button type="button" class="textknopf" id="termin-zu">Abbrechen</button></div>');
   t.push('<div class="zeile-knoepfe" style="align-items:flex-end"><div class="feld-gruppe"><span class="beschriftung">Art</span><div class="chips" id="nt-art">' +
     TERMINARTEN.map(function (a, i) { return '<button type="button" class="chip" data-art="' + esc(a) + '" aria-pressed="' + (i === vorwahl) + '">' + esc(a) + "</button>"; }).join("") + "</div></div>");
   t.push('<div class="feld-gruppe"><label class="beschriftung" for="nt-datum">Datum</label><input class="feld" id="nt-datum" type="date" value="' + HEUTE + '"></div>');
@@ -1357,9 +1588,9 @@ function karteNaechstes(k, ks) {
   }
   if (!ks) {
     var a = aufgabeVon(k.id);
-    var mir = a ? a.punkte.filter(function (p) { return !p.fertig && p.art === "mir"; }).length : 0;
-    var kd = a ? a.punkte.filter(function (p) { return !p.fertig && p.art === "kunde"; }).length : 0;
-    t.push('<button type="button" class="karte klick-karte" data-reiter="aufgaben"><span class="beschriftung">In Klar</span><div class="mini-zahl">' + mir + ' <small>bei mir</small></div><span class="leise klein">' + kd + " " + (kd === 1 ? "wartet" : "warten") + " auf " + esc(k.vorname) + "</span></button>");
+    var offenP = a && a.status !== "erledigt" ? a.punkte.filter(function (p) { return punktStand(p) !== "fertig"; }) : [];
+    var mir = offenP.filter(function (p) { return !p.warten; }).length, kd = offenP.length - mir;
+    t.push('<button type="button" class="karte klick-karte" data-reiter="aufgaben"><span class="beschriftung">In Klar</span><div class="mini-zahl">' + mir + ' <small>bei mir</small></div><span class="leise klein">' + (kd ? kd + " " + (kd === 1 ? "wartet" : "warten") : "Nichts wartet") + "</span></button>");
   }
   return t.join("");
 }
@@ -1459,34 +1690,122 @@ function reiterTermine(k) {
   return t.join("");
 }
 
-function punkteHtml(a, k, ps) {
-  return '<ul class="punkte">' + ps.map(function (p) {
-    var th = p.thema ? k.themen.filter(function (x) { return x.id === p.thema; })[0] : null;
-    var faellig = p.art === "kunde" && !p.fertig && p.wieder && p.wieder <= HEUTE;
-    return '<li data-fertig="' + (p.fertig ? "ja" : "nein") + '"><button type="button" class="haken" role="checkbox" aria-checked="' + !!p.fertig + '" data-ab="' + a.id + "|" + p.id + '" aria-label="' + esc(p.t) + '">' + HAKEN_SVG + "</button><span>" +
-      '<span class="pt">' + esc(p.t) + (th ? '<span class="tag">' + esc(th.name) + "</span>" : "") + "</span>" +
-      (faellig ? '<br><span class="pn faellig">Wiedervorlage seit ' + datumKurz(p.wieder) + ", " + tageZwischen(p.seit, HEUTE) + " Tage offen</span>" : p.notiz ? '<br><span class="pn">' + esc(p.notiz) + "</span>" : "") +
-      (p.schritte && !p.fertig ? '<span class="ablauf">' + p.schritte.map(esc).join(" · ") + "</span>" : "") + "</span></li>";
-  }).join("") + "</ul>";
-}
+/* ---------- Aufgaben wie in Klar ----------
+   Dieselben Teile wie dort: Kopf mit Stand und Abhaken, Wer ist dran (Ich, Warte auf …, Wiedervorlage),
+   Priorität und Fällig, Unterpunkte mit Notiz und ab „läuft“ mit Lösung, warte auf …, Erledigt,
+   Verlauf und Festhalten, Notiz. */
+var WT_KURZ = ["So", "Mo", "Di", "Mi", "Do", "Fr", "Sa"];
+var LAUF_WORT = { offen: "offen — tippen: läuft", laeuft: "läuft — tippen: erledigt", fertig: "erledigt — tippen: offen" };
+function zz(n) { return (n < 10 ? "0" : "") + n; }
+function zeitKlar(iso) { var d = new Date(iso); return isNaN(d) ? "" : WT_KURZ[d.getDay()] + ", " + zz(d.getDate()) + "." + zz(d.getMonth() + 1) + ". · " + zz(d.getHours()) + ":" + zz(d.getMinutes()); }
+function aufgabeStand(a) { return a.status === "erledigt" ? ["erledigt", "Erledigt"] : a.laeuft ? ["laeuft", "In Arbeit"] : ["offen", "Offen"]; }
 
-function reiterAufgaben(k) {
-  var a = aufgabeVon(k.id), t = [];
-  t.push('<div class="aufgabe" style="max-width:820px"><div class="aufgabe-kopf"><b>' + esc("@" + k.name) + '</b><span class="klar-zeile"><span class="punkt"></span>in Klar</span></div>');
-  if (a && a.notiz) { t.push('<p class="notiz">' + esc(a.notiz) + "</p>"); }
-  if (!a || !a.punkte.length) { t.push('<p class="leise">Noch keine Punkte.</p>'); }
-  else {
-    var offen = a.punkte.filter(function (p) { return !p.fertig; }), fertig = a.punkte.filter(function (p) { return p.fertig; });
-    t.push(punkteHtml(a, k, offen.concat(fertig)));
+function aufgabeInhalt(a, inline) {
+  var k = kundeVon(a.kunde), t = [], id = a.id, st = aufgabeStand(a);
+  var offen = a.punkte.filter(function (p) { return punktStand(p) !== "fertig"; });
+  var fertig = a.punkte.filter(function (p) { return punktStand(p) === "fertig"; });
+  var laeuft = offen.filter(function (p) { return punktStand(p) === "laeuft"; }).length;
+  t.push('<div class="a-kopf">' + (inline ? "" : '<button type="button" class="zurueck" data-blatt-zu="1">← Zurück</button>') + '<span class="a-status" data-s="' + st[0] + '">' + st[1] + '</span><span class="a-aktionen">' +
+    (a.status === "erledigt" ? '<button type="button" class="knopf still klein" data-a-wieder="' + id + '">Wieder öffnen</button>'
+      : '<button type="button" class="knopf still klein" data-a-laeuft="' + id + '">' + (a.laeuft ? "Pausieren" : "Angefangen") + '</button><button type="button" class="knopf klein" data-a-ab="' + id + '">Abhaken</button>') + "</span></div>");
+  t.push('<input class="a-titel" data-a-feld="titel" data-aid="' + id + '" value="' + esc(a.titel) + '" aria-label="Aufgabe" autocomplete="off">');
+  if (!inline && k) { t.push('<button type="button" class="textknopf a-akte" data-akte="' + k.id + '" data-zu-reiter="ueberblick">Akte von ' + esc(k.name) + " öffnen</button>"); }
+
+  var wer = a.warten ? "warte" : a.vorlage ? "vorlage" : "ich";
+  t.push('<div class="a-feld"><span class="beschriftung">Wer ist dran?</span><div class="umschalter breit" role="group" aria-label="Wer ist dran"><span class="gleiter" aria-hidden="true"></span>' +
+    [["ich", "Ich"], ["warte", "Warte auf …"], ["vorlage", "Wiedervorlage"]].map(function (o) { return '<button type="button" data-a-wer="' + id + "|" + o[0] + '" aria-pressed="' + (wer === o[0]) + '">' + o[1] + "</button>"; }).join("") + "</div>");
+  if (wer === "warte") {
+    var lw = lageWarten(a.warten, HEUTE);
+    t.push('<div class="a-unterzeile"><div class="chips">' + Object.keys(WARTE_ARTEN).map(function (x) { return '<button type="button" class="chip plus" data-a-warteart="' + id + "|" + x + '" aria-pressed="' + (a.warten.art === x) + '">' + WARTE_ARTEN[x] + "</button>"; }).join("") +
+      '</div><span class="leise klein">seit ' + datumKurz(a.warten.seit) + " · " + (lw.dran ? '<b class="draengt">nachfragen</b>' : "nachfragen am " + datumKurz(lw.naechst)) + "</span></div>");
   }
-  t.push('<div class="neuer-punkt"><input class="feld" id="neuer-punkt" placeholder="Neuer Punkt, z. B. Kfz-Kündigung vorbereiten" autocomplete="off" aria-label="Neuer Punkt"><button type="button" class="knopf still" id="punkt-dazu">Dazu</button></div>');
+  if (wer === "vorlage") {
+    t.push('<div class="a-unterzeile"><input class="feld klein-feld" type="date" data-a-vorlage="' + id + '" value="' + esc(a.vorlage.am) + '" aria-label="Wiedervorlage am"><span class="leise klein">bis dahin aus der Liste</span></div>');
+  }
   t.push("</div>");
+
+  var ueber = a.faellig && a.status !== "erledigt" ? tageZwischen(a.faellig, HEUTE) : 0;
+  t.push('<div class="a-zeile"><div class="a-feld"><span class="beschriftung">Priorität</span><div class="prio" role="group" aria-label="Priorität">' +
+    [[1, "Hoch"], [2, "Mittel"], [3, "Niedrig"]].map(function (o) { return '<button type="button" data-prio="' + o[0] + '" data-a-prio="' + id + "|" + o[0] + '" aria-pressed="' + (a.prio === o[0]) + '">' + o[1] + "</button>"; }).join("") + "</div></div>" +
+    '<div class="a-feld"><span class="beschriftung">Fällig</span><input class="feld klein-feld' + (ueber > 0 ? " ueber" : "") + '" type="date" data-a-faellig="' + id + '" value="' + esc(a.faellig || "") + '" aria-label="Fällig am">' +
+    (ueber > 0 ? '<span class="draengt klein">' + ueber + (ueber === 1 ? " Tag" : " Tage") + " überfällig</span>" : "") + "</div></div>");
+
+  t.push('<div class="a-feld"><span class="beschriftung">Unterpunkte <b>' + fertig.length + " von " + a.punkte.length + "</b>" + (laeuft ? " · " + laeuft + " läuft" : "") + "</span>");
+  t.push('<ul class="kpunkte">' + offen.map(function (p, i) { return punktKarte(a, p, i + 1, k); }).join("") +
+    '<li class="neupunkt"><span class="platz"></span><input class="punkt-neu" data-neupunkt="' + id + '" placeholder="Punkt hinzufügen …" aria-label="Punkt hinzufügen" autocomplete="off"></li></ul>');
+  if (fertig.length) {
+    t.push('<div class="trenner"><span>Erledigt · ' + fertig.length + '</span></div><ul class="kpunkte erledigt">' + fertig.map(function (p, i) {
+      return '<li class="kpunkt" data-st="fertig"><div class="p-kopf"><button type="button" class="haken" data-st="fertig" data-p-stand="' + id + "|" + p.id + '" aria-label="' + LAUF_WORT.fertig + '" title="' + LAUF_WORT.fertig + '">' + HAKEN_SVG + '</button><span class="p-nr">' + (offen.length + i + 1) + '</span><span class="p-text">' + esc(p.t) + "</span></div>" +
+        (p.loesung ? '<p class="p-loesung-kurz">' + esc(p.loesung) + "</p>" : "") + "</li>";
+    }).join("") + "</ul>");
+  }
+  t.push("</div>");
+
+  t.push('<div class="a-feld"><span class="beschriftung">Verlauf <b>' + a.verlauf.length + (a.verlauf.length === 1 ? " Schritt" : " Schritte") + '</b></span><ol class="kverlauf">' + a.verlauf.map(function (v) {
+    var pk = v.pid ? a.punkte.filter(function (x) { return x.id === v.pid; })[0] : null;
+    return '<li data-art="' + (v.art === "hand" ? "hand" : "auto") + '"><span class="p"></span><span class="t"><small>' + zeitKlar(v.am) + (pk && v.art === "hand" ? " · " + esc(pk.t) : "") + "</small>" + esc(v.text) + "</span></li>";
+  }).join("") + "</ol>");
+  var ziel = S.fhZiel[id] || "";
+  t.push('<div class="chips fh-ziele"><button type="button" class="chip plus" data-fh-ziel="' + id + '|" aria-pressed="' + !ziel + '">Ganze Aufgabe</button>' + offen.map(function (p, i) {
+    return '<button type="button" class="chip plus" data-fh-ziel="' + id + "|" + p.id + '" aria-pressed="' + (ziel === p.id) + '"><span class="p-nr klein">' + (i + 1) + "</span>" + esc(p.t) + "</button>";
+  }).join("") + "</div>");
+  t.push('<textarea class="feld fh-text" data-fh-text="' + id + '" rows="2" placeholder="Was ist passiert? Angerufen, nachgehakt, Antwort bekommen …" aria-label="Festhalten">' + esc(S.fhText[id] || "") + "</textarea>");
+  t.push('<div class="zeile-knoepfe"><button type="button" class="knopf still klein" data-festhalten="' + id + '">Festhalten</button><span class="leise klein">⌘↵ tut dasselbe</span></div></div>');
+
+  t.push('<div class="a-feld"><span class="beschriftung">Notiz</span><textarea class="feld" data-a-feld="notiz" data-aid="' + id + '" rows="3" data-auto="1" aria-label="Notiz zur Aufgabe">' + esc(a.notiz || "") + "</textarea></div>");
+  t.push('<p class="a-fuss leise klein">notiert am ' + datum(String(a.erstellt).slice(0, 10)) + "</p>");
   return t.join("");
 }
 
+function punktKarte(a, p, nr, k) {
+  var st = punktStand(p), th = p.thema && k ? k.themen.filter(function (x) { return x.id === p.thema; })[0] : null, w = a.id + "|" + p.id, t = [];
+  t.push('<li class="kpunkt" data-st="' + st + '" data-pid="' + p.id + '"><div class="p-kopf"><button type="button" class="haken" data-st="' + st + '" data-p-stand="' + w + '" aria-label="' + LAUF_WORT[st] + '" title="' + LAUF_WORT[st] + '">' + HAKEN_SVG + "</button>" +
+    '<span class="p-nr">' + nr + '</span><input class="punkt-feld" data-p-feld="t" data-aid="' + a.id + '" data-pid="' + p.id + '" value="' + esc(p.t) + '" aria-label="Unterpunkt" autocomplete="off">' +
+    (th ? '<span class="tag">' + esc(th.name) + "</span>" : "") + '<button type="button" class="weg" data-p-weg="' + w + '" aria-label="Unterpunkt löschen">×</button></div>');
+  t.push('<div class="p-zweige"><div class="p-ast"><span class="marke-k">Notiz</span><textarea data-p-feld="notiz" data-aid="' + a.id + '" data-pid="' + p.id + '" rows="1" data-auto="1" placeholder="Was du dazu wissen musst: Ansprechpartner, Nummer, Link …" aria-label="Notiz zum Unterpunkt">' + esc(p.notiz || "") + "</textarea></div>");
+  if (st !== "offen") { t.push('<div class="p-ast loesung"><span class="marke-k">Lösung</span><textarea data-p-feld="loesung" data-aid="' + a.id + '" data-pid="' + p.id + '" rows="1" data-auto="1" placeholder="Was am Ende funktioniert hat – fürs nächste Mal …" aria-label="Lösung zum Unterpunkt">' + esc(p.loesung || "") + "</textarea></div>"); }
+  t.push("</div>");
+  if (p.warten) {
+    var l = lageWarten(p.warten, HEUTE);
+    t.push('<div class="p-warte"><span class="wflag" data-dran="' + l.dran + '">wartet auf ' + esc(WARTE_ARTEN[p.warten.art]) + " seit " + datumKurz(p.warten.seit) + (l.n ? " · " + l.n + "× nachgefragt" : "") + " · " + (l.dran ? "nachfragen" : "nachfragen am " + datumKurz(l.naechst)) +
+      '</span><button type="button" class="textknopf" data-p-nachgefragt="' + w + '">Nachgefragt</button><button type="button" class="textknopf" data-p-antwort="' + w + '">Antwort kam</button></div>');
+  } else if (S.warteWahl === p.id) {
+    t.push('<div class="p-warte"><span class="leise klein">warte auf</span>' + Object.keys(WARTE_ARTEN).map(function (x) { return '<button type="button" class="chip plus" data-p-warteart="' + w + "|" + x + '">' + WARTE_ARTEN[x] + "</button>"; }).join("") + "</div>");
+  } else {
+    t.push('<div class="p-warte"><button type="button" class="p-link" data-p-warte="' + w + '">warte auf …</button></div>');
+  }
+  t.push("</li>");
+  return t.join("");
+}
+
+function reiterAufgaben(k) {
+  var a = aufgabeVon(k.id);
+  if (!a) {
+    return '<div class="karte a-karte"><p class="leise" style="margin-bottom:10px">Noch keine Aufgabe in Klar. Sie entsteht beim Nachbereiten oder mit dem ersten Punkt.</p>' +
+      '<div class="neuer-punkt"><input class="feld" data-neupunkt-kunde="' + k.id + '" placeholder="Punkt hinzufügen …" aria-label="Punkt hinzufügen" autocomplete="off"></div></div>';
+  }
+  return '<div class="karte a-karte"><div class="klar-zeile"><span class="punkt"></span>in Klar</div>' + aufgabeInhalt(a, true) + "</div>";
+}
+
+/* Das Aufgabenblatt rechts, wie in Klar (am Handy ganzseitig). */
+function blattZeichnen() {
+  var el = document.getElementById("blatt");
+  var a = S.blatt ? S.aufgaben.filter(function (x) { return x.id === S.blatt; })[0] : null;
+  if (!a) { el.hidden = true; el.innerHTML = ""; document.documentElement.removeAttribute("data-blatt"); return; }
+  var alt = el.querySelector(".blatt-flaeche"), oben = alt ? alt.scrollTop : 0;
+  el.hidden = false;
+  document.documentElement.setAttribute("data-blatt", "offen");
+  el.innerHTML = '<div class="blatt-hinter" data-blatt-zu="1"></div><aside class="blatt-flaeche" role="dialog" aria-label="Aufgabe ' + esc(a.titel) + '">' + aufgabeInhalt(a, false) + "</aside>";
+  el.querySelector(".blatt-flaeche").scrollTop = oben;
+}
+
+function autoHoehe(feld) { feld.style.height = "auto"; feld.style.height = feld.scrollHeight + 2 + "px"; }
+
 function reiterVerlauf(k, ks) {
   var t = [];
-  var liste = k.verlauf.filter(function (v) { return !(ks && v.intern); }).slice().sort(function (a, b) { return a.d < b.d ? 1 : a.d > b.d ? -1 : 0; });
+  var liste = k.verlauf.slice(), au = aufgabeVon(k.id);
+  if (au) { au.verlauf.forEach(function (v) { if (v.art === "hand") { liste.push({ id: v.id, d: String(v.am).slice(0, 10), art: "klar", text: v.text, intern: true }); } }); }
+  liste = liste.filter(function (v) { return !(ks && v.intern); }).sort(function (a, b) { return a.d < b.d ? 1 : a.d > b.d ? -1 : 0; });
   t.push('<div class="karte" style="max-width:820px"><ol class="verlauf gross">');
   liste.forEach(function (v) {
     t.push('<li data-art="' + v.art + '" class="' + (S.neu && S.neu.indexOf(v.id) >= 0 ? "neu" : "") + '"><span class="p"></span><span class="t">' +
@@ -1624,7 +1943,7 @@ function seiteNach() {
     nb.aufgabe.punkte.forEach(function (p, j) {
       var aus = p.an === false;
       t.push('<li data-aus="' + (aus ? "ja" : "nein") + '"><button type="button" class="haken" role="checkbox" aria-checked="' + !aus + '" data-punkt-an="' + j + '" aria-label="' + esc(p.t) + ' übernehmen">' + HAKEN_SVG + "</button><span>" +
-        '<span class="pt">' + esc(p.t) + (p.quelle ? '<span class="tag">Wiki</span>' : "") + "</span>" +
+        '<span class="pt">' + esc(p.t) + (p.quelle ? '<span class="tag">Wiki</span>' : "") + (p.wartetAuf ? '<span class="tag">wartet auf ' + esc(p.wartetAuf) + "</span>" : "") + "</span>" +
         (p.notiz ? '<br><span class="pn">' + esc(p.notiz) + "</span>" : "") +
         (p.schritte ? '<span class="ablauf">' + p.schritte.map(esc).join(" · ") + "</span>" : "") + "</span></li>");
     });
@@ -1673,26 +1992,34 @@ function weiter(idx) {
 
 /* ---------- Aufgaben (alle Kunden, wie in Klar) ---------- */
 function seiteAufgaben() {
-  var t = [], f = S.filter;
-  var zaehl = { mir: 0, kunde: 0, fertig: 0 };
-  S.aufgaben.forEach(function (a) { a.punkte.forEach(function (p) { if (p.fertig) { zaehl.fertig += 1; } else { zaehl[p.art] += 1; } }); });
-  t.push('<div class="schmal"><div class="ansage"><div><h1>' + (f === "mir" ? zaehl.mir + " Punkte bei mir" : f === "kunde" ? zaehl.kunde + " warten auf Kunden" : zaehl.fertig + " erledigt") + "</h1><p>Dieselben Aufgaben wie in Klar. Abhaken hier oder in Klar, die Akte zieht nach.</p></div></div>");
-  t.push('<div><div class="umschalter" id="filter" role="group" aria-label="Filter"><span class="gleiter" aria-hidden="true"></span>' +
-    [["mir", "Bei mir"], ["kunde", "Wartet auf Kunden"], ["fertig", "Erledigt"]].map(function (o) {
-      return '<button type="button" data-filter="' + o[0] + '" aria-pressed="' + (f === o[0]) + '">' + o[1] + "</button>";
-    }).join("") + "</div></div>");
-  var gezeigt = 0;
+  var t = [], braucht = [], rest = [], fertig = [];
   S.aufgaben.forEach(function (a) {
-    var k = kundeVon(a.kunde);
-    var ps = a.punkte.filter(function (p) { return f === "fertig" ? p.fertig : (!p.fertig && p.art === f) || (p.fertig && S.geradeAb && S.geradeAb[p.id]); });
-    if (!ps.length) { return; }
-    gezeigt += 1;
-    t.push('<article class="aufgabe"><div class="aufgabe-kopf"><button type="button" data-akte="' + k.id + '" data-zu-reiter="aufgaben">' + esc(a.titel) + '</button><span class="klar-zeile"><span class="punkt"></span>in Klar</span></div>' +
-      (a.notiz ? '<p class="notiz">' + esc(a.notiz) + "</p>" : "") + punkteHtml(a, k, ps) + "</article>");
+    if (a.status === "erledigt") { fertig.push(a); return; }
+    var dran = a.punkte.some(function (p) { return p.warten && punktStand(p) !== "fertig" && lageWarten(p.warten, HEUTE).dran; }) || (a.warten && lageWarten(a.warten, HEUTE).dran);
+    if (dran || (a.faellig && a.faellig <= HEUTE)) { braucht.push(a); } else { rest.push(a); }
   });
-  if (!gezeigt) { t.push('<p class="leer">Hier ist gerade nichts.</p>'); }
+  t.push('<div class="schmal"><div class="ansage"><div><h1>' + offenBeiMir() + " Punkte bei mir</h1><p>Dieselben Aufgaben wie in Klar. Abhaken hier oder in Klar, die Akte zieht nach.</p></div></div>");
+  function gruppe(titel, art, liste) {
+    if (!liste.length) { return; }
+    t.push('<section class="kgruppe" data-art="' + art + '"><div class="kg-kopf"><b>' + liste.length + "</b>" + titel + "</div>" + liste.map(aufgabeZeile).join("") + "</section>");
+  }
+  gruppe("Braucht dich heute", "dringend", braucht);
+  gruppe("Offen", "offen", rest);
+  if (!braucht.length && !rest.length) { t.push('<p class="leer">Nichts offen.</p>'); }
+  if (fertig.length) { t.push('<details class="kgruppe erledigt-gruppe"><summary>Erledigt · ' + fertig.length + "</summary>" + fertig.map(aufgabeZeile).join("") + "</details>"); }
   t.push("</div>");
   return t.join("");
+}
+
+function aufgabeZeile(a) {
+  var offen = a.punkte.filter(function (p) { return punktStand(p) !== "fertig"; }), fertig = a.punkte.length - offen.length;
+  var naechster = offen.filter(function (p) { return !p.warten; })[0] || offen[0];
+  var dran = offen.filter(function (p) { return p.warten && lageWarten(p.warten, HEUTE).dran; }).length;
+  var laeuft = offen.some(function (p) { return punktStand(p) === "laeuft"; }) || a.laeuft;
+  var flagge = dran ? '<span class="flag draengt">nachfragen</span>' : a.faellig ? '<span class="flag' + (a.faellig <= HEUTE ? " draengt" : "") + '">' + datumKurz(a.faellig) + "</span>" : "";
+  return '<div class="kzeile" data-erledigt="' + (a.status === "erledigt") + '"><button type="button" class="haken" data-st="' + (a.status === "erledigt" ? "fertig" : "offen") + '" data-a-umschalten="' + a.id + '" aria-label="' + (a.status === "erledigt" ? "Wieder öffnen" : "Abhaken") + ": " + esc(a.titel) + '">' + HAKEN_SVG + "</button>" +
+    '<button type="button" class="kz-text" data-blatt-auf="' + a.id + '"><span class="kz-titel">' + esc(a.titel) + "</span>" + (naechster ? '<span class="kz-unter">' + (laeuft ? '<i class="laeuft-punkt"></i>' : "") + esc(naechster.t) + "</span>" : "") + "</button>" +
+    '<span class="kz-rechts"><span class="mk">' + fertig + "/" + a.punkte.length + "</span>" + flagge + "</span></div>";
 }
 
 /* ---------- Ereignisse ---------- */
@@ -1722,20 +2049,21 @@ document.addEventListener("click", function (e) {
     var frisch = beispielStand(); S.kunden = frisch.kunden; S.aufgaben = frisch.aufgaben; S.offen = {};
     document.getElementById("entwurf-text").hidden = true; go("heute"); toast("Beispiel neu geladen"); return;
   }
+  if (d.blattZu) { S.blatt = null; S.warteWahl = null; render(false); return; }
+  if (d.blattAuf) { S.blatt = d.blattAuf; S.warteWahl = null; render(false); return; }
   if (d.geh) { go(d.geh); return; }
   if (d.akte) { go("akte", { kunde: d.akte, reiter: d.zuReiter || "ueberblick" }); return; }
   if (d.terminOeffnen) { var to = d.terminOeffnen.split("|"); go("termin", { kunde: to[0], termin: to[1] }); return; }
   if (d.nachbereiten) { var nbt = d.nachbereiten.split("|"); starteNach(nbt[0], nbt[1]); return; }
-  if (d.reiter) { S.reiter = d.reiter; S.blatt = null; render(false); return; }
-  if (d.filter) { S.filter = d.filter; S.geradeAb = null; render(false); return; }
+  if (d.reiter) { S.reiter = d.reiter; S.terminForm = false; render(false); return; }
 
   /* Kunde anlegen */
   if (d.taetigkeit) { b.parentNode.querySelectorAll(".chip").forEach(function (c) { c.setAttribute("aria-pressed", String(c === b && c.getAttribute("aria-pressed") !== "true")); }); return; }
 
   /* Akte */
-  if (b.id === "kundensicht") { S.kundensicht = !S.kundensicht; S.blatt = null; render(false); return; }
-  if (b.id === "neuer-termin") { S.blatt = S.blatt === "termin" ? null : "termin"; render(false); return; }
-  if (b.id === "blatt-zu") { S.blatt = null; render(false); return; }
+  if (b.id === "kundensicht") { S.kundensicht = !S.kundensicht; S.terminForm = false; render(false); return; }
+  if (b.id === "neuer-termin") { S.terminForm = !S.terminForm; render(false); return; }
+  if (b.id === "termin-zu") { S.terminForm = false; render(false); return; }
   if (d.art) { b.parentNode.querySelectorAll(".chip").forEach(function (c) { c.setAttribute("aria-pressed", String(c === b)); }); return; }
   if (b.id === "nt-anlegen") {
     var k0 = kundeVon(S.kunde), artEl = app.querySelector('#nt-art [aria-pressed="true"]'), dat = document.getElementById("nt-datum").value || HEUTE;
@@ -1752,7 +2080,6 @@ document.addEventListener("click", function (e) {
     var nth = { id: neueId("t"), wiki: d.themaDazu, name: w0.name, stand: "naechstes", was: "Im nächsten Termin besprechen", faden: [{ id: neueId("f"), d: HEUTE, text: "Fürs nächste Mal vorgemerkt" }] };
     kd.themen.push(nth); render(false); toast(w0.name + " fürs nächste Mal vorgemerkt"); return;
   }
-  if (b.id === "punkt-dazu") { punktDazu(); return; }
 
   /* Finanzen */
   if (b.id === "finanzen-start") { kundeVon(S.kunde).finanzen = { stand: HEUTE, posten: [] }; render(false); return; }
@@ -1762,19 +2089,41 @@ document.addEventListener("click", function (e) {
     render(false); finanzenNachziehen(kw); return;
   }
 
-  /* Abhaken (Heute, Akte, Aufgaben) */
-  if (d.ab) {
-    var teile = d.ab.split("|");
-    var an = b.getAttribute("aria-checked") !== "true";
-    var r = abhaken(S, teile[0], teile[1], an, HEUTE);
-    b.setAttribute("aria-checked", String(an));
-    var li = b.closest("li"); if (li) { li.dataset.fertig = an ? "ja" : "nein"; }
-    S.geradeAb = S.geradeAb || {}; S.geradeAb[teile[1]] = an;
-    if (r && an && r.thema) { toast(r.thema.name + " bei " + r.kunde.vorname + ": " + STAND[r.thema.stand].kurz); }
-    else if (r && an) { toast("Im Verlauf von " + r.kunde.vorname); }
-    kopf(); speichern();
-    return;
+  /* Aufgaben wie in Klar */
+  if (d.pStand) {
+    var ps = d.pStand.split("|"), f1 = finde(S, ps[0], ps[1]);
+    var r = setzePunktStand(S, ps[0], ps[1], naechsterPunktStand(f1.p));
+    if (r && punktStand(r.punkt) === "fertig" && r.thema) { toast(r.thema.name + " bei " + r.kunde.vorname + ": " + STAND[r.thema.stand].kurz); }
+    render(false); return;
   }
+  if (d.pWeg) {
+    var pw = d.pWeg.split("|"), f2 = finde(S, pw[0], pw[1]);
+    f2.a.punkte = f2.a.punkte.filter(function (x) { return x.id !== pw[1]; });
+    verlaufDazu(f2.a, "Unterpunkt gelöscht: " + f2.p.t, "auto", "punkt:" + f2.p.t);
+    render(false); return;
+  }
+  if (d.pWarte) { S.warteWahl = d.pWarte.split("|")[1]; render(false); return; }
+  if (d.pWarteart) { var pa = d.pWarteart.split("|"); warteAuf(S, pa[0], pa[1], pa[2], HEUTE); S.warteWahl = null; render(false); return; }
+  if (d.pNachgefragt) {
+    var pn = d.pNachgefragt.split("|"); nachgefragt(S, pn[0], pn[1], HEUTE);
+    var l1 = lageWarten(finde(S, pn[0], pn[1]).p.warten, HEUTE); toast("Nachgefragt. Nächstes Mal am " + datumKurz(l1.naechst)); render(false); return;
+  }
+  if (d.pAntwort) { var pr = d.pAntwort.split("|"), f3 = antwortKam(S, pr[0], pr[1], HEUTE); toast("Antwort da. " + (f3 && f3.th ? f3.th.name + ": bei mir" : "Du bist dran.")); render(false); return; }
+  if (d.aAb) { aufgabeAbhaken(S, d.aAb, true); toast("Abgehakt"); render(false); return; }
+  if (d.aWieder) { aufgabeAbhaken(S, d.aWieder, false); render(false); return; }
+  if (d.aUmschalten) { var au = finde(S, d.aUmschalten).a; aufgabeAbhaken(S, au.id, au.status !== "erledigt"); if (au.status === "erledigt") { toast("Abgehakt"); } render(false); return; }
+  if (d.aLaeuft) { var al = finde(S, d.aLaeuft).a; aufgabeLaeuft(S, al.id, !al.laeuft); render(false); return; }
+  if (d.aWer) {
+    var aw = d.aWer.split("|"), aa = finde(S, aw[0]).a;
+    if (aw[1] === "ich") { if (aa.warten) { verlaufDazu(aa, "Warten auf " + WARTE_ARTEN[aa.warten.art] + " beendet, du bist dran.", "auto", "antwort"); } aa.warten = null; aa.vorlage = null; }
+    if (aw[1] === "warte" && !aa.warten) { aa.warten = { art: "kunde", seit: HEUTE, nachgefragt: [] }; aa.vorlage = null; aa.laeuft = false; verlaufDazu(aa, "Wartet auf Kunde.", "auto", "warten"); }
+    if (aw[1] === "vorlage" && !aa.vorlage) { aa.vorlage = { am: plusTage(HEUTE, 7), grund: "" }; aa.warten = null; aa.laeuft = false; verlaufDazu(aa, "Wiedervorlage am " + datum(aa.vorlage.am) + ".", "auto", "vorlage"); }
+    render(false); return;
+  }
+  if (d.aWarteart) { var wa = d.aWarteart.split("|"), ab = finde(S, wa[0]).a; if (ab.warten) { ab.warten.art = wa[1]; } render(false); return; }
+  if (d.aPrio) { var ap = d.aPrio.split("|"); finde(S, ap[0]).a.prio = +ap[1]; render(false); return; }
+  if (d.fhZiel !== undefined) { var fz = d.fhZiel.split("|"); S.fhZiel[fz[0]] = fz[1] || ""; render(false); return; }
+  if (d.festhalten) { festhaltenJetzt(d.festhalten); return; }
 
   /* Termin und Nachbereiten */
   if (b.id === "beispiel-mitschrift") {
@@ -1807,7 +2156,7 @@ document.addEventListener("click", function (e) {
     S.nb = null;
     k.themen.forEach(function (th) { S.offen[th.id] = false; });
     S.neu = erg.neu.verlauf.concat(erg.neu.themen);
-    S.seite = "akte"; S.reiter = "ueberblick"; S.blatt = null;
+    S.seite = "akte"; S.reiter = "ueberblick"; S.terminForm = false;
     render(true); window.scrollTo({ top: 0 });
     toast(erg.punkte ? "In Klar: " + erg.punkte + " Punkte bei " + k.name : "Nachbereitet");
     return;
@@ -1825,6 +2174,12 @@ document.addEventListener("submit", function (e) {
   toast(k.name + " angelegt");
 });
 
+function festhaltenJetzt(aid) {
+  if (!festhalten(S, aid, S.fhText[aid], S.fhZiel[aid] || null)) { return; }
+  S.fhText[aid] = ""; S.fhZiel[aid] = "";
+  render(false); toast("Festgehalten");
+}
+
 function eigenesThema() {
   var f = document.getElementById("eigenes-thema"); var n = f.value.trim(); if (!n) { return; }
   var nt = { key: "e" + n, wiki: null, name: n, quelle: "hand", zitat: "", stand: "mir", gewaehlt: true };
@@ -1832,9 +2187,17 @@ function eigenesThema() {
   var neu = document.getElementById("eigenes-thema"); if (neu) { neu.focus(); }
 }
 
-function punktDazu() {
-  var f = document.getElementById("neuer-punkt");
-  if (neuerPunkt(S, S.kunde, f.value)) { render(false); var n = document.getElementById("neuer-punkt"); if (n) { n.focus(); } toast("In Klar eingetragen"); }
+function punktDazu(feld) {
+  var t = feld.value.trim(); if (!t) { return; }
+  if (feld.dataset.neupunkt) {
+    var a = S.aufgaben.filter(function (x) { return x.id === feld.dataset.neupunkt; })[0];
+    if (a.status === "erledigt") { a.status = "offen"; a.erledigtAm = ""; }
+    a.punkte.push(neuerKlarPunkt(t, { kundeText: t + ": erledigt" }));
+  } else { neuerPunkt(S, feld.dataset.neupunktKunde, t); }
+  var sel = feld.dataset.neupunkt ? '[data-neupunkt="' + feld.dataset.neupunkt + '"]' : "[data-neupunkt]";
+  var imBlatt = !!feld.closest("#blatt");
+  render(false);
+  var n = (imBlatt ? document.getElementById("blatt") : app).querySelector(sel); if (n) { n.focus(); }
 }
 
 var speicherZeit;
@@ -1846,6 +2209,10 @@ document.addEventListener("input", function (e) {
     clearTimeout(speicherZeit); speicherZeit = setTimeout(function () { speichern(); var h2 = document.getElementById("speicher-hinweis"); if (h2) { h2.textContent = "gespeichert"; } }, 600);
   }
   if (el.id === "mailtext") { S.nb.mail = el.value; S.nb.mailEigen = true; mailHoehe(); }
+  if (d.aFeld) { finde(S, d.aid).a[d.aFeld] = el.value; speichern(); }
+  if (d.pFeld) { var fp = finde(S, d.aid, d.pid).p; fp[d.pFeld] = d.pFeld === "t" ? el.value : (el.value.trim() ? el.value : null); speichern(); }
+  if (d.fhText) { S.fhText[d.fhText] = el.value; }
+  if (d.auto) { autoHoehe(el); }
   if (d.was !== undefined) { nbGewaehlt()[+d.was].was = el.value; S.nb.aufgabe = null; }
   if (el.id === "suche") {
     S.suche = el.value; var q = el.value.toLowerCase();
@@ -1858,11 +2225,19 @@ document.addEventListener("input", function (e) {
     finanzenNachziehen(k);
   }
 });
-document.addEventListener("keydown", function (e) {
-  if (e.key !== "Enter") { return; }
+document.addEventListener("change", function (e) {
   var el = e.target, d = el.dataset || {};
+  if (d.aFaellig) { finde(S, d.aFaellig).a.faellig = el.value || null; render(false); }
+  if (d.aVorlage && el.value) { finde(S, d.aVorlage).a.vorlage.am = el.value; render(false); }
+});
+document.addEventListener("keydown", function (e) {
+  var el = e.target, d = el.dataset || {};
+  if (e.key === "Escape" && S.blatt) { S.blatt = null; render(false); return; }
+  if (e.key !== "Enter") { return; }
+  if (d.fhText && (e.metaKey || e.ctrlKey)) { e.preventDefault(); festhaltenJetzt(d.fhText); return; }
+  if (d.neupunkt || d.neupunktKunde) { e.preventDefault(); punktDazu(el); return; }
+  if (d.pFeld === "t" || d.aFeld === "titel") { e.preventDefault(); el.blur(); return; }
   if (el.id === "eigenes-thema") { e.preventDefault(); eigenesThema(); return; }
-  if (el.id === "neuer-punkt") { e.preventDefault(); punktDazu(); return; }
   if (d.was !== undefined) { e.preventDefault(); weiter(2 + +d.was); return; }
   if (d.postenName) { e.preventDefault(); var b = app.querySelector('[data-posten-betrag="' + d.postenName + '"]'); if (b) { b.focus(); b.select(); } return; }
   if (d.postenBetrag) {

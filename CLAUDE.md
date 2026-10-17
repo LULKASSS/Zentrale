@@ -27,6 +27,10 @@ Stelle. Sprache in App, Code-Kommentaren und Commits: **Deutsch**.
   - Der Überblick ist die Landingpage je Kunde, mit der man im Termin nachvollzieht, was offen ist und was passiert
     ist; dort ein Blickfang, der die Themen zeigt (17.10.2026).
   - Alles andere klein und dicht: wo man nur sehen muss, was ansteht, nehmen Elemente wenig Platz ein (17.10.2026).
+  - Entwurf 3 „schon sehr cool, sieht richtig nach was aus“: Landingpage mit Ring und Fahrplan, die dichte Fassung
+    (17.10.2026).
+  - Aufgaben genau wie in Klar aufgebaut, mit derselben Bedienung, damit man sich wiederfindet: Aufgabe,
+    Unterpunkte, Notiz, Lösung, Warten, Verlauf, Festhalten (17.10.2026).
 - **Nicht gewollt:**
   - Eine zweite Aufgabenliste neben Klar.
   - Das Aussehen am Finanzakte-Screenshot ausrichten (17.10.2026: „ganz neu, Design soll das Ziel unterstützen,
@@ -55,7 +59,15 @@ Stelle. Sprache in App, Code-Kommentaren und Commits: **Deutsch**.
   Faden, Termine als gestrichelte Linien, heute in Flieder, offene Themen gestrichelt bis heute bzw. bis zum
   nächsten Termin, Text am Punkt beim Darüberfahren). Darunter „Seit dem Termin am …“ (was besprochen wurde und was
   seitdem passiert ist), „Offen“ (bei mir, beim Kunden, nächstes Mal), als Nächstes/frei im Monat/in Klar, dann alle
-  Themen als dichte Liste. Wartet auf Lukas.
+  Themen als dichte Liste.
+  Rückmeldung: sehr cool; Aufgaben sollen genau wie in Klar sein; „wenn du magst, bau es final“.
+- Entwurf 4 (17.10.2026, gleicher Link): Aufgaben in Klars Datenform und Bedienung. Liste wie in Klar („Braucht
+  dich heute“, „Offen“, „Erledigt“), Zeile mit Haken, nächstem Punkt, „3/5“, nachfragen/fällig. Antippen öffnet
+  das Blatt rechts (Handy ganzseitig): Stand, Angefangen/Pausieren, Abhaken, Wer ist dran (Ich, Warte auf …,
+  Wiedervorlage), Priorität, Fällig, Unterpunkte (Haken offen → läuft → erledigt, Nummer, Notiz, ab „läuft“
+  Lösung, warte auf … mit Nachgefragt/Antwort kam), Punkt hinzufügen, Erledigt, Verlauf, Festhalten (Ganze
+  Aufgabe oder ein Punkt, ⌘↵), Notiz. In der Akte steht dieselbe Aufgabe im Reiter Aufgaben. Heute zeigt
+  „Nachfragen“ nach Klars Rhythmus. Wartet auf Lukas.
 
 ## Aufbau
 - `index.html` – die ganze App. Erstes Script `<script id="kern">`: Daten (Kunde mit `themen`, `termine`, `finanzen`,
@@ -64,8 +76,9 @@ Stelle. Sprache in App, Code-Kommentaren und Commits: **Deutsch**.
   (Zustand `S`, `render()`, `go(seite)`). CSS in einem `<style>`-Block (Tokens → Grundlagen → Bausteine → Bereiche).
   Look nach Skill `app-ui`, Schrift Geist über Google Fonts.
 - `scripts/` – `serve.mjs` (:5190), `check.mjs`, `artefakt.mjs <ziel>` (Fassung fürs Claude-Artifact).
-- `test/` – `kern.spec.js`, `app.spec.js` (Heute, Kunde anlegen, Finanzen, Termin, Nachbereiten, Landingpage mit
-  Ring und Fahrplan, Kundensicht, Abhaken, Neuladen, Handy, hell/dunkel, keine doppelten IDs).
+- `test/` – `kern.spec.js` (u. a. Klars Form, Punkt-Zyklus, Warten-Rhythmus, Festhalten), `app.spec.js` (Heute, Kunde
+  anlegen, Finanzen, Termin, Nachbereiten, Landingpage, Aufgabenliste und Blatt wie in Klar, Warten/Nachfragen/
+  Antwort, Kundensicht, Neuladen, Handy, hell/dunkel, keine doppelten IDs).
 
 ## Befehle
 - `npm test` – Fehlercheck + alle Tests, vor jedem Commit grün. Cloud-Sitzung: `PW_CHROMIUM=/opt/pw-browsers/chromium npm test`.
@@ -81,10 +94,19 @@ Stelle. Sprache in App, Code-Kommentaren und Commits: **Deutsch**.
 - Stand eines Themas immer mit Wort, nie nur Farbe: bei mir = Flieder voll, beim Kunden = Flieder schraffiert,
   nächstes Mal = grau, erledigt = grün.
 - Aufgaben nach den Klar-Regeln: eine Aufgabe je Kunde (`@Name`), Unterpunkte konkret, „Termin vereinbaren“ und
-  „Termin vorbereiten“ (was, steht in der Notiz), wartet der Kunde: „Wartet auf …“ mit Wiedervorlage in 7 Tagen.
+  „Termin vorbereiten“ (was, steht in der Notiz). Wartet der Kunde, steht am Punkt `warten {art: "kunde", seit,
+  nachgefragt}`; nachfragen wie in Klar nach 3, 7, 14, 21 Tagen.
+- **Aufgaben haben Klars Datenform** (aus `LULKASSS/klar`, `test/beispiel.json` und `src/klar.html`): Aufgabe
+  `{id, titel, cluster, prio, faellig, status, erstellt, erledigtAm, notiz, punkte, verlauf, wiederholung, laeuft,
+  warten, vorlage}`, Punkt `{id, t, ok, st (offen|laeuft|fertig), loesung, notiz, warten}`, Verlauf
+  `{id, am, text, art (auto|hand), quelle, pid, pfertig}`. Was nur die Zentrale braucht, steht zusätzlich daran und
+  Klar lässt es stehen: `aufgabe.kunde`, `punkt.thema`, `punkt.art`, `punkt.kundeText`, `punkt.intern`. Damit können
+  die Punkte später 1:1 in Klars `stand/aktuell`.
+- Bedienung der Aufgaben wie in Klar (Haken-Zyklus, Notiz immer, Lösung ab „läuft“, Festhalten, Erledigt-Liste);
+  Ocker heißt „läuft“ wie dort.
 - In der Ansicht mit dem Kunden bleibt Internes weg: nur Überblick, Finanzen, Verlauf; keine Kontaktdaten, keine
   Klar-Einträge, kein „Neuer Termin“.
-- Entwurf speichert nur im Tab (`sessionStorage`, Schlüssel `zentrale.entwurf.2`), „Beispiel neu laden“ unter „Entwurf“.
+- Entwurf speichert nur im Tab (`sessionStorage`, Schlüssel `zentrale.entwurf.3`), „Beispiel neu laden“ unter „Entwurf“.
   Die echte Fassung speichert im Konto, nicht im Browser.
 
 ## Annahmen (Lukas vorlegen)
@@ -92,7 +114,8 @@ Stelle. Sprache in App, Code-Kommentaren und Commits: **Deutsch**.
   vorbereiten mit dem Investmentrechner). Die echten kommen aus dem Persönlichen Wiki.
 - Abhaken des letzten eigenen Punkts eines Themas setzt es auf „beim Kunden“ (Angebot geschickt); erledigt der Kunde
   seinen Teil, geht es zurück zu Lukas (BU, Kfz) oder ist erledigt.
-- Wiedervorlage für „Wartet auf …“: 7 Tage.
+- Abhaken eines Punkts, auf den beim Kunden gewartet wurde, oder „Antwort kam“ gibt das Thema an Lukas zurück
+  (BU: Voranfrage stellen, Kfz: Angebot rechnen), sonst ist es erledigt.
 - Finanzen: frei = Einnahmen − (Wohnen und Verträge + Versicherungen + Leben + Sparen und Vorsorge). Vermögen getrennt,
   zählt nicht mit. Keine Bewertung, nur Zahlen.
 

@@ -76,8 +76,9 @@ test('eine Aufgabe je Kunde mit Wiki-Schritten, Wartet-Punkten, Mail und Termin'
   const { aufgabe } = nachbereitet();
   expect(aufgabe.titel).toBe('@Lea Muster');
   const t = aufgabe.punkte.map(p => p.t);
-  expect(t).toEqual(expect.arrayContaining(['Haftpflicht: Angebot rechnen', 'Wartet auf Lea: Gesundheitsfragen klären',
-    'Wartet auf Lea: Steuerbescheid 2025 schicken', 'Mail verschicken', 'Termin vereinbaren', 'Termin vorbereiten']));
+  expect(t).toEqual(expect.arrayContaining(['Haftpflicht: Angebot rechnen', 'Gesundheitsfragen klären',
+    'Steuerbescheid 2025 schicken', 'Mail verschicken', 'Termin vereinbaren', 'Termin vorbereiten']));
+  expect(aufgabe.punkte.find(p => p.t === 'Gesundheitsfragen klären').wartetAuf).toBe('Lea');
   const vor = aufgabe.punkte.find(p => p.t === 'Termin vorbereiten');
   expect(vor.notiz).toBe('Vorbereiten: Altersvorsorge');
   expect(vor.schritte).toContain('Rentenlücke im Investmentrechner rechnen');
@@ -106,7 +107,12 @@ test('Übernehmen schließt den Termin ab, schreibt Themen, Verlauf und eine Auf
   expect(K.offeneTermine(k)).toEqual([]);
   expect(k.themen.length).toBe(6);
   expect(k.verlauf.some(v => v.art === 'termin' && v.text === 'Erstgespräch')).toBe(true);
-  expect(S.aufgaben.filter(a => a.kunde === 'lea').length).toBe(1);
+  const a = S.aufgaben.find(x => x.kunde === 'lea');
+  expect(S.aufgaben.filter(x => x.kunde === 'lea').length).toBe(1);
+  expect(a.titel).toBe('@Lea Muster');
+  expect(a.punkte.find(p => p.t === 'Gesundheitsfragen klären').warten).toEqual({ art: 'kunde', seit: K.HEUTE, nachgefragt: [] });
+  expect(a.punkte.find(p => p.t === 'Haftpflicht: Angebot rechnen').notiz).toContain('Ablauf (Wiki): Rechnen');
+  expect(a.verlauf.at(-1).text).toMatch(/^Aus der Zentrale: Erstgespräch 17.10.2026 nachbereitet, \d+ Punkte\.$/);
 });
 
 test('Update-Termin hängt an die bestehende Aufgabe und das bestehende Thema an', () => {
@@ -124,6 +130,15 @@ test('Update-Termin hängt an die bestehende Aufgabe und das bestehende Thema an
   expect(bu.faden.length).toBe(2);
 });
 
+test('Aufgaben haben Klars Form', () => {
+  const S = K.beispielStand();
+  const a = S.aufgaben.find(x => x.kunde === 'beispiel');
+  for (const f of ['id', 'titel', 'cluster', 'prio', 'faellig', 'status', 'erstellt', 'erledigtAm', 'notiz', 'punkte', 'verlauf', 'wiederholung']) expect(a).toHaveProperty(f);
+  for (const f of ['id', 't', 'ok', 'st', 'loesung', 'notiz']) expect(a.punkte[0]).toHaveProperty(f);
+  expect(a.verlauf[0]).toEqual(expect.objectContaining({ am: expect.any(String), text: expect.any(String), art: 'auto' }));
+  expect(a.punkte.find(p => p.t === 'Gesundheitsfragen klären').warten).toEqual({ art: 'kunde', seit: '2026-10-02', nachgefragt: ['2026-10-06'] });
+});
+
 test('Eigener Punkt landet in der Klar-Aufgabe des Kunden, leer gibt es nicht', () => {
   const S = K.beispielStand();
   expect(K.neuerPunkt(S, 'test', '  ')).toBeNull();
@@ -131,6 +146,7 @@ test('Eigener Punkt landet in der Klar-Aufgabe des Kunden, leer gibt es nicht', 
   const a = S.aufgaben.find(x => x.kunde === 'test');
   expect(a.titel).toBe('@Sven Testmann');
   expect(a.punkte.map(p => p.t)).toEqual(['Kfz-Kündigung vorbereiten']);
+  expect(a.verlauf[0].text).toBe('Aufgabe angelegt.');
 });
 
 test('Stand von Hand ändern schreibt den Faden fort', () => {
@@ -143,22 +159,57 @@ test('Stand von Hand ändern schreibt den Faden fort', () => {
   expect(kfz.faden.at(-1).text).toBe('Bei mir');
 });
 
-test('Abhaken schreibt Faden und Verlauf fort, Zurücknehmen stellt alles wieder her', () => {
+test('Punkt wie in Klar: offen → läuft → erledigt → offen, Verlauf, Thema und Akte ziehen nach', () => {
   const S = K.beispielStand();
   const a = S.aufgaben.find(x => x.kunde === 'probe');
   const k = S.kunden.find(x => x.id === 'probe');
   const p = a.punkte.find(x => x.t.startsWith('Hausrat'));
   const th = k.themen.find(t => t.name === 'Hausrat');
-  const verlauf = k.verlauf.length;
-  K.abhaken(S, a.id, p.id, true, K.HEUTE);
+  const am = '2026-10-17T09:00:00.000Z';
+  expect(K.naechsterPunktStand(p)).toBe('laeuft');
+  K.setzePunktStand(S, a.id, p.id, 'laeuft', am);
+  expect(a.verlauf.at(-1).text).toBe('Hausrat: Vertrag vergleichen — angefangen.');
+  p.loesung = 'Neuer Tarif 20 % günstiger';
+  K.setzePunktStand(S, a.id, p.id, 'fertig', am);
+  expect(p.ok).toBe(true);
+  expect(a.verlauf.at(-1)).toEqual(expect.objectContaining({ pid: p.id, pfertig: true, text: 'Hausrat: Vertrag vergleichen — erledigt. Lösung: Neuer Tarif 20 % günstiger' }));
   expect(th.stand).toBe('kunde');
   expect(th.was).toBe('Vergleich geschickt');
-  expect(k.verlauf.length).toBe(verlauf + 1);
-  K.abhaken(S, a.id, p.id, false, K.HEUTE);
+  expect(k.verlauf.at(-1).d).toBe('2026-10-17');
+  const nVerlauf = a.verlauf.length;
+  K.setzePunktStand(S, a.id, p.id, 'offen', am);
   expect(th.stand).toBe('mir');
   expect(th.faden.length).toBe(1);
-  expect(k.verlauf.length).toBe(verlauf);
-  const w = a.punkte.find(x => x.art === 'kunde');
-  K.abhaken(S, a.id, w.id, true, K.HEUTE);
-  expect(k.themen.find(t => t.name === 'Kfz').stand).toBe('mir');
+  expect(a.verlauf.length).toBe(nVerlauf - 1);
+});
+
+test('Warten wie in Klar: nachfragen nach 3, 7, 14, 21 Tagen, Antwort kam gibt das Thema zurück', () => {
+  const S = K.beispielStand();
+  const a = S.aufgaben.find(x => x.kunde === 'probe');
+  const p = a.punkte.find(x => x.warten);
+  expect(K.lageWarten({ seit: '2026-10-10', nachgefragt: [] }, '2026-10-12').dran).toBe(false);
+  expect(K.lageWarten({ seit: '2026-10-10', nachgefragt: [] }, '2026-10-13').dran).toBe(true);
+  expect(K.lageWarten({ seit: '2026-10-10', nachgefragt: ['2026-10-13'] }, '2026-10-17').naechst).toBe('2026-10-17');
+  expect(K.lageWarten(p.warten, K.HEUTE)).toEqual(expect.objectContaining({ dran: true, alter: 22, n: 2 }));
+  K.nachgefragt(S, a.id, p.id, K.HEUTE);
+  expect(K.lageWarten(p.warten, K.HEUTE).dran).toBe(false);
+  const kfz = S.kunden.find(x => x.id === 'probe').themen.find(t => t.name === 'Kfz');
+  K.antwortKam(S, a.id, p.id, K.HEUTE);
+  expect(p.warten).toBeNull();
+  expect(kfz.stand).toBe('mir');
+  expect(kfz.was).toBe('Angebot rechnen');
+  expect(a.verlauf.at(-1).text).toBe('Antwort kam (Kunde): Fahrzeugschein schicken');
+});
+
+test('Festhalten und Abhaken schreiben den Verlauf der Aufgabe', () => {
+  const S = K.beispielStand();
+  const a = S.aufgaben.find(x => x.kunde === 'beispiel');
+  expect(K.festhalten(S, a.id, '  ')).toBeNull();
+  const e = K.festhalten(S, a.id, 'Mira angerufen', a.punkte[3].id, '2026-10-17T10:00:00.000Z');
+  expect(e).toEqual(expect.objectContaining({ art: 'hand', pid: a.punkte[3].id, text: 'Mira angerufen' }));
+  K.aufgabeAbhaken(S, a.id, true, '2026-10-17T11:00:00.000Z');
+  expect(a.status).toBe('erledigt');
+  expect(a.erledigtAm).toBe('2026-10-17T11:00:00.000Z');
+  K.aufgabeAbhaken(S, a.id, false);
+  expect(a.status).toBe('offen');
 });

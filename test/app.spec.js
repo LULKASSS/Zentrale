@@ -18,7 +18,7 @@ test('Heute zeigt, was nachzubereiten ist, was zu lange wartet und die nächsten
   await page.goto('/');
   await expect(page.locator('h1')).toHaveText('Samstag, 17. Oktober');
   await expect(page.locator('.nachbereiten-karte')).toContainText('Lea Muster');
-  await expect(page.locator('.lzeile.mit-haken')).toHaveCount(2);
+  await expect(page.locator('.abschnitt', { hasText: 'Nachfragen' }).locator('.lzeile')).toHaveCount(2);
   await expect(page.locator('.abschnitt', { hasText: 'Nächste Termine' })).toContainText('Sven Testmann');
 });
 
@@ -73,7 +73,7 @@ test('Termin nachbereiten: Thema für Thema, dann Klar und Mail, Akte zieht nach
   await expect(page.locator('.thema')).toHaveCount(6);
   await expect(page.locator('#toast')).toContainText('In Klar');
   await page.click('[data-reiter="aufgaben"]');
-  await expect(page.locator('.punkte')).toContainText('Haftpflicht: Angebot rechnen');
+  await expect(page.locator('.punkt-feld[value="Haftpflicht: Angebot rechnen"]')).toHaveCount(1);
   await page.click('[data-reiter="termine"]');
   await expect(page.locator('.termin-karte')).toContainText('Nachbereitet');
   await page.click('[data-geh="heute"]');
@@ -110,19 +110,50 @@ test('Mit dem Kunden ansehen: nur Überblick, Finanzen, Verlauf, nichts Internes
   await expect(page.locator('.profil')).not.toContainText('@');
 });
 
-test('Abhaken in den Aufgaben schreibt das Thema in der Akte fort', async ({ page }) => {
+test('Aufgaben wie in Klar: Liste, Blatt, Punkt läuft mit Lösung, erledigt, Akte zieht nach', async ({ page }) => {
   await page.goto('/');
   await page.click('[data-geh="aufgaben"]');
-  const p = page.locator('.aufgabe', { hasText: 'Tom Probe' }).locator('[data-ab]').first();
-  await p.click();
-  await expect(p).toHaveAttribute('aria-checked', 'true');
+  await expect(page.locator('.kgruppe[data-art="dringend"]')).toContainText('@Tom Probe');
+  await page.click('.kz-text:has-text("@Tom Probe")');
+  const blatt = page.locator('.blatt-flaeche');
+  await expect(blatt).toBeVisible();
+  await expect(blatt.locator('.a-status')).toHaveText('Offen');
+  const hausrat = blatt.locator('.kpunkt[data-pid]').first();
+  await expect(hausrat.locator('.punkt-feld')).toHaveValue('Hausrat: Vertrag vergleichen');
+  await hausrat.locator('.haken').click();
+  await expect(blatt.locator('.kpunkt[data-pid]').first()).toHaveAttribute('data-st', 'laeuft');
+  await blatt.locator('.kpunkt[data-pid]').first().locator('[data-p-feld="loesung"]').fill('Neuer Tarif günstiger');
+  await blatt.locator('.kpunkt[data-pid]').first().locator('.haken').click();
   await expect(page.locator('#toast')).toContainText('Hausrat bei Tom: beim Kunden');
-  await page.click('.aufgabe-kopf button:has-text("Tom Probe")');
-  await page.click('[data-reiter="ueberblick"]');
-  const hausrat = page.locator('.thema', { hasText: 'Hausrat' });
-  await expect(hausrat.locator('.stand')).toHaveText('Beim Kunden');
-  await page.click('[data-reiter="verlauf"]');
-  await expect(page.locator('.verlauf')).toContainText('Hausrat: Vertrag vergleichen');
+  await expect(blatt.locator('.kpunkte.erledigt')).toContainText('Hausrat: Vertrag vergleichen');
+  await expect(blatt.locator('.kverlauf')).toContainText('Lösung: Neuer Tarif günstiger');
+  await page.keyboard.press('Escape');
+  await expect(blatt).toHaveCount(0);
+  await page.click('[data-geh="kunden"]');
+  await page.click('[data-akte="probe"]');
+  await expect(page.locator('.thema', { hasText: 'Hausrat' }).locator('.stand')).toHaveText('Beim Kunden');
+});
+
+test('Warten, Nachfragen, Antwort kam, Festhalten, Punkt dazu, Abhaken', async ({ page }) => {
+  await page.goto('/');
+  await page.click('.abschnitt:has-text("Nachfragen") .lzeile:has-text("Tom Probe")');
+  const blatt = page.locator('.blatt-flaeche');
+  const kfz = () => blatt.locator('.kpunkt[data-pid]').nth(1);
+  await expect(kfz().locator('.wflag')).toContainText('wartet auf Kunde seit 25.09. · 2× nachgefragt · nachfragen');
+  await kfz().locator('[data-p-nachgefragt]').click();
+  await expect(page.locator('#toast')).toContainText('Nächstes Mal am');
+  await expect(kfz().locator('.wflag')).toContainText('3× nachgefragt');
+  await kfz().locator('[data-p-antwort]').click();
+  await expect(kfz().locator('.wflag')).toHaveCount(0);
+  await blatt.locator('[data-fh-text]').fill('Tom hat den Schein per Mail geschickt');
+  await blatt.locator('[data-fh-text]').press('Control+Enter');
+  await expect(blatt.locator('.kverlauf li[data-art="hand"]').last()).toContainText('Tom hat den Schein per Mail geschickt');
+  await blatt.locator('[data-neupunkt]').fill('Angebot Kfz rechnen');
+  await blatt.locator('[data-neupunkt]').press('Enter');
+  await expect(blatt.locator('.punkt-feld[value="Angebot Kfz rechnen"]')).toHaveCount(1);
+  await expect(blatt.locator('[data-neupunkt]')).toBeFocused();
+  await blatt.locator('[data-a-ab]').click();
+  await expect(blatt.locator('.a-status')).toHaveText('Erledigt');
 });
 
 test('Landingpage: Ring, Fahrplan mit Terminen und heute, Tooltip am Punkt', async ({ page }) => {
@@ -180,6 +211,9 @@ for (const scheme of ['light', 'dark']) {
     }
     await page.click('[data-geh="aufgaben"]');
     await breit('aufgaben');
+    await page.click('.kz-text:has-text("@Jonas")');
+    await breit('blatt');
+    await page.click('.blatt-flaeche [data-blatt-zu]');
     await nachbereiteLea(page);
     await breit('nachbereiten');
     expect(fehler).toEqual([]);
